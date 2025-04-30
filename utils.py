@@ -127,6 +127,18 @@ def make_prediction(model, feature_values):
         st.error(traceback.format_exc())
         return None
 
+    """Function to get feature importance"""
+def get_feature_importance(model, feature_cols):
+    if model is None or feature_cols is None:
+        return None
+        
+    try:
+        importances = model.feature_importances_
+        feature_importance = dict(zip(feature_cols, importances))
+        sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
+                                                    key=lambda item: item[1], 
+                                                    reverse=True)}
+        return sorted_importance
 
     except Exception as e:
         st.error(f"Error getting feature importance: {e}")
