@@ -13,6 +13,8 @@ from utils import (
 )
 
 # GitHub repository information - UPDATE THESE WITH YOUR DETAILS
+GITHUB_USERNAME = "oliverkohal"  # Replace with your GitHub username
+REPO_NAME = "BTC-model-predictor---Random-Forest"       # Replace with your repository name
 MODEL_FILENAME = "btc_rf_model.pkl"
 
 def clean_numeric_data(df, columns):
