@@ -69,7 +69,7 @@ def train_model(df, feature_cols, random_state=123):
    
     try:
         """Split data into training and testing sets"""
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_state)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=123)
         
         """Train Random Forest model with optimized parameters"""
         model = RandomForestRegressor(
