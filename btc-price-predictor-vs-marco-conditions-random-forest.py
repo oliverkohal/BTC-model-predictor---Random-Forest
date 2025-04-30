@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 import warnings
 import traceback
 import os
@@ -184,14 +182,7 @@ def main():
             # Sort by importance
             importance_df = importance_df.sort_values('Importance', ascending=False)
             
-            # Create bar chart
-            fig = px.bar(importance_df, x='Feature', y='Importance', 
-                         title='Random Forest Feature Importance',
-                         color='Importance',
-                         color_continuous_scale='Viridis')
-            
-            st.plotly_chart(fig, use_container_width=True)
-            
+                       
             # Create expandable sections for feature importance analysis
             with st.expander("Feature Importance Analysis", expanded=True):
                 st.write("**Random Forest Feature Importance Analysis:**")
