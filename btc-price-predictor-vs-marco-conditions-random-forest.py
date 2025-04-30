@@ -7,15 +7,7 @@ import warnings
 import traceback
 import os
 
-from utils import (
-    load_data, preprocess_data, train_model, make_prediction, get_feature_importance,
-    download_model_from_github, load_model_from_file, predict_btc_price
-)
-
-# GitHub repository information - UPDATE THESE WITH YOUR DETAILS
-GITHUB_USERNAME = "oliverkohal"  # Replace with your GitHub username
-REPO_NAME = "BTC-model-predictor---Random-Forest"       # Replace with your repository name
-MODEL_FILENAME = "btc_rf_model.pkl"
+from utils import load_data, preprocess_data, train_model, make_prediction, get_feature_importance
 
 def clean_numeric_data(df, columns):
     """
@@ -117,52 +109,14 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Option to use GitHub model
-    use_github_model = st.sidebar.checkbox("Use pre-trained model from GitHub", value=True)
-    
-    # Initialize model variables
-    model = None
-    r_squared = None
-    rmse = None
-    clean_df = clean_btc_df  # Use the cleaned dataframe
-    scaler = None
-    features = None
-    
+    # Train model with selected features
     try:
-        # Option 1: Use pre-trained model from GitHub
-        if use_github_model:
-            # First try to download model if not exists
-            if download_model_from_github(GITHUB_USERNAME, REPO_NAME, MODEL_FILENAME):
-                # Then load the model
-                model, scaler, features = load_model_from_file(MODEL_FILENAME)
-                
-                if model is not None:
-                    st.success("Successfully loaded pre-trained model!")
-                    # Set default values for metrics
-                    r_squared = 0.95
-                    rmse = 4947.59
-                    
-                    # Update selected features to match the model
-                    if features is not None and set(selected_features) != set(features):
-                        st.warning(f"Using features from pre-trained model: {', '.join(features)}")
-                        selected_features = features
-                else:
-                    use_github_model = False
-                    st.warning("Failed to load model from GitHub. Training a new model instead.")
-        
-        # Option 2: Train a new model
-        if not use_github_model:
-            with st.spinner("Training new model..."):
-                model, r_squared, rmse, trained_df = train_model(clean_btc_df, selected_features)
-                
-                if model is None:
-                    st.error("Could not train model. Please check your data.")
-                    return
-                
-                if trained_df is not None:
-                    clean_df = trained_df  # Use the dataframe returned by training if available
-                    
-                features = selected_features  # Store for prediction
+        with st.spinner("Training model..."):
+            model, r_squared, rmse, clean_df = train_model(clean_btc_df, selected_features)
+            
+            if model is None:
+                st.error("Could not train model. Please check your data.")
+                return
         
         # User input for prediction
         st.subheader("Make a Prediction")
@@ -192,11 +146,7 @@ def main():
 
         # Predict button
         if st.button("Predict BTC Price"):
-            # Use appropriate prediction function based on whether we have a scaler
-            if use_github_model and scaler is not None:
-                prediction = predict_btc_price(model, scaler, selected_features, feature_values)
-            else:
-                prediction = make_prediction(model, feature_values)
+            prediction = make_prediction(model, feature_values)
             
             if prediction is not None:
                 st.success(f'Estimated BTC price: ${prediction:,.2f}')
@@ -285,4 +235,5 @@ def main():
 
 if __name__ == '__main__':
     main()
- 
+
+     
