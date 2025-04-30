@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-import warnings
+import streamlit as st
 import traceback
 
 """Function to load data"""
@@ -15,7 +15,7 @@ def load_data():
             df['date'] = pd.to_datetime(df['date'])
         return df
     except FileNotFoundError:
-        print("btc_macroeconomic.csv not found. Using sample data.")
+        st.warning("btc_macroeconomic.csv not found. Using sample data.")
         return None
 
 """Function to preprocess data and ensure it's suitable for training"""
@@ -26,7 +26,7 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     """Ensure all feature columns and target column exist"""
     missing_cols = [col for col in feature_cols + [target_col] if col not in df_copy.columns]
     if missing_cols:
-        print(f"Missing columns in dataset: {', '.join(missing_cols)}")
+        st.error(f"Missing columns in dataset: {', '.join(missing_cols)}")
         return None, None, None, None, None
    
     """Replace 'No data' with NaN and convert to numeric"""
@@ -34,13 +34,13 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     df_copy[numeric_columns] = df_copy[numeric_columns].apply(pd.to_numeric, errors='coerce')
     df_copy = df_copy.replace('No data', np.nan)
     
-    """Extract features and target before imputation (for later reference)"""
-    X = df_copy[feature_cols]
+    """Extract features and target before imputation"""
+    X_orig = df_copy[feature_cols]
     y = df_copy[target_col]
     
     """Use median imputation for missing values"""
     imputer = SimpleImputer(strategy='median')
-    X_imputed = imputer.fit_transform(X)
+    X_imputed = imputer.fit_transform(X_orig)
     
     """Scale the features for better model performance"""
     scaler = StandardScaler()
@@ -51,18 +51,21 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     X_clean = X_scaled[mask]
     y_clean = y.values[mask]
     
+    """Keep the clean dataframe for UI display"""
+    df_clean = df_copy.loc[mask].copy()
+    
     if len(y_clean) < 10:
-        print("Not enough clean data points for reliable model training")
+        st.error("Not enough clean data points for reliable model training")
         return None, None, None, None, None
     
-    return X_clean, y_clean, list(X.columns), imputer, scaler
+    return X_clean, y_clean, df_clean, imputer, scaler
 
 def train_model(df, feature_cols, random_state=123):
     """Preprocess data"""
-    X, y, feature_names, imputer, scaler = preprocess_data(df, feature_cols)
+    X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
    
     if X is None or y is None:
-        return None, None, None, None, None, None
+        return None, None, None, None
    
     try:
         """Split data into training and testing sets"""
@@ -88,81 +91,54 @@ def train_model(df, feature_cols, random_state=123):
         y_pred = model.predict(X_test)
         rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
         
-        """Calculate OOB score"""
-        oob_score = model.oob_score_
+        """Store imputer and scaler in model object for prediction"""
+        model._imputer = imputer
+        model._scaler = scaler
        
-        return model, r_squared, rmse, oob_score, imputer, scaler
+        # Return only the 4 values that Streamlit expects
+        return model, r_squared, rmse, df_clean
     except Exception as e:
-        print(f"Error during model training: {e}")
-        traceback.print_exc()
-        return None, None, None, None, None, None
+        st.error(f"Error during model training: {e}")
+        st.error(traceback.format_exc())
+        return None, None, None, None
 
 """Function to make a prediction with multiple features"""
-def make_prediction(model, feature_values, imputer, scaler):
-    if model is None or imputer is None or scaler is None:
+def make_prediction(model, feature_values):
+    if model is None:
         return None
    
     try:
-        """Ensure all features are float and reshape for sklearn"""
+        """Ensure all features are float"""
         features = np.array([float(val) for val in feature_values]).reshape(1, -1)
         
         """Apply the same preprocessing as during training"""
-        features_imputed = imputer.transform(features)
-        features_scaled = scaler.transform(features_imputed)
-        
-        """Make prediction"""
-        prediction = model.predict(features_scaled)[0]
+        # Get imputer and scaler from model object
+        if hasattr(model, '_imputer') and hasattr(model, '_scaler'):
+            features_imputed = model._imputer.transform(features)
+            features_scaled = model._scaler.transform(features_imputed)
+            prediction = model.predict(features_scaled)[0]
+        else:
+            # Fallback if no preprocessing objects stored
+            prediction = model.predict(features)[0]
+            
         return prediction
     except Exception as e:
-        print(f"Error making prediction: {e}")
-        traceback.print_exc()
+        st.error(f"Error making prediction: {e}")
+        st.error(traceback.format_exc())
         return None
 
-"""Function to display feature importance"""
-def get_feature_importance(model, feature_names):
-    if model is None or feature_names is None:
+"""Function to get feature importance"""
+def get_feature_importance(model, feature_cols):
+    if model is None or feature_cols is None:
         return None
         
     try:
         importances = model.feature_importances_
-        feature_importance = dict(zip(feature_names, importances))
+        feature_importance = dict(zip(feature_cols, importances))
         sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
                                                     key=lambda item: item[1], 
                                                     reverse=True)}
         return sorted_importance
     except Exception as e:
-        print(f"Error getting feature importance: {e}")
+        st.error(f"Error getting feature importance: {e}")
         return None
-
-# Example usage
-if __name__ == "__main__":
-    # Default feature columns
-    feature_cols = ['gold_price_usd', 'SP500', 'fed_funds_rate', 
-                   'US_inflation', 'US_M2_money_supply_in_billions']
-    
-    # Load data
-    df = load_data()
-    
-    if df is not None:
-        # Train model
-        model, r_squared, rmse, oob_score, imputer, scaler = train_model(df, feature_cols)
-        
-        if model is not None:
-            print(f"\nRandom Forest Performance:")
-            print(f"Test R² Score: {r_squared:.4f}")
-            print(f"Test RMSE: {rmse:.4f}")
-            print(f"OOB R² Score: {oob_score:.4f}")
-            
-            # Display feature importance
-            importance = get_feature_importance(model, feature_cols)
-            if importance:
-                print("\nFeature Importance:")
-                for feature, score in importance.items():
-                    print(f"{feature}: {score:.4f}")
-            
-            # Example prediction (replace with actual values)
-            sample_features = [1800, 4000, 0.5, 2.5, 21500]  # Example values
-            prediction = make_prediction(model, sample_features, imputer, scaler)
-            if prediction is not None:
-                print(f"\nSample prediction: ${prediction:.2f}")
-    
