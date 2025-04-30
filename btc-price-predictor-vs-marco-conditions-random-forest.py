@@ -13,9 +13,57 @@ from utils import (
 )
 
 # GitHub repository information - UPDATE THESE WITH YOUR DETAILS
-GITHUB_USERNAME = "your-username"  # Replace with your GitHub username
-REPO_NAME = "your-repo-name"       # Replace with your repository name
 MODEL_FILENAME = "btc_rf_model.pkl"
+
+def clean_numeric_data(df, columns):
+    """
+    Clean numeric data by removing 'No data' and converting to float
+    """
+    df_clean = df.copy()
+    
+    # Replace 'No data' with NaN
+    df_clean = df_clean.replace('No data', np.nan)
+    
+    # Convert to numeric
+    for col in columns:
+        if col in df_clean.columns:
+            df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+    
+    return df_clean
+
+def get_min_max_values(df, feature):
+    """
+    Get min and max values for a feature safely
+    """
+    try:
+        # Handle case where all values are NaN
+        if df[feature].isna().all():
+            return 0, 100  # Default fallback values
+            
+        # Get min and max, ignoring NaN values
+        min_val = float(df[feature].dropna().min())
+        max_val = float(df[feature].dropna().max())
+        
+        # Ensure min != max to avoid slider errors
+        if min_val == max_val:
+            min_val = max(0, min_val - 1)
+            max_val = max_val + 1
+            
+        return min_val, max_val
+    except:
+        # Fallback default values
+        default_ranges = {
+            'gold_price_usd': (1000, 3500),
+            'SP500': (1800, 6200),
+            'fed_funds_rate': (0, 6),
+            'US_inflation': (-1, 9),
+            'US_M2_money_supply_in_billions': (11000, 22000)
+        }
+        
+        if feature in default_ranges:
+            return default_ranges[feature]
+        else:
+            return 0, 100  # Generic fallback
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
@@ -31,6 +79,9 @@ def main():
         st.error("Failed to load data. Please check your data source.")
         return
         
+    # Clean the dataframe to handle 'No data' and convert to numeric
+    clean_btc_df = clean_numeric_data(btc_macro_df, btc_macro_df.columns)
+        
     # Define the specific macro features to use
     macro_features = [
         'gold_price_usd',
@@ -41,12 +92,12 @@ def main():
     ]
 
     # Verify which features are available in the dataset
-    available_features = [feat for feat in macro_features if feat in btc_macro_df.columns]
+    available_features = [feat for feat in macro_features if feat in clean_btc_df.columns]
     
     if not available_features:
         st.error("None of the required macro features are in the dataset.")
         # Show available columns
-        st.write("Available columns:", ", ".join(btc_macro_df.columns.tolist()))
+        st.write("Available columns:", ", ".join(clean_btc_df.columns.tolist()))
         return
     
     # Sidebar for model configuration
@@ -71,7 +122,7 @@ def main():
     model = None
     r_squared = None
     rmse = None
-    clean_df = None
+    clean_df = clean_btc_df  # Use the cleaned dataframe
     scaler = None
     features = None
     
@@ -85,10 +136,9 @@ def main():
                 
                 if model is not None:
                     st.success("Successfully loaded pre-trained model!")
-                    # Set default values for metrics (exact values from your previous output)
+                    # Set default values for metrics
                     r_squared = 0.95
                     rmse = 4947.59
-                    clean_df = btc_macro_df  # Use original data for UI display
                     
                     # Update selected features to match the model
                     if features is not None and set(selected_features) != set(features):
@@ -101,11 +151,14 @@ def main():
         # Option 2: Train a new model
         if not use_github_model:
             with st.spinner("Training new model..."):
-                model, r_squared, rmse, clean_df = train_model(btc_macro_df, selected_features)
+                model, r_squared, rmse, trained_df = train_model(clean_btc_df, selected_features)
                 
                 if model is None:
                     st.error("Could not train model. Please check your data.")
                     return
+                
+                if trained_df is not None:
+                    clean_df = trained_df  # Use the dataframe returned by training if available
                     
                 features = selected_features  # Store for prediction
         
@@ -117,22 +170,10 @@ def main():
         
         # Make sure to use the actual column names from your dataset
         for feature in selected_features:
-            min_val = float(clean_df[feature].min())
-            max_val = float(clean_df[feature].max())
+            min_val, max_val = get_min_max_values(clean_df, feature)
             
-            # Set default values for better demonstration
-            if feature == 'gold_price_usd':
-                default_val = 3055.0
-            elif feature == 'SP500':
-                default_val = 5695.0
-            elif feature == 'fed_funds_rate':
-                default_val = 4.33
-            elif feature == 'US_inflation':
-                default_val = 2.75
-            elif feature == 'US_M2_money_supply_in_billions':
-                default_val = 21671.0
-            else:
-                default_val = float(clean_df[feature].median())
+            # Use median as default value
+            default_val = float(clean_df[feature].dropna().median())
                 
             # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
@@ -162,25 +203,6 @@ def main():
                 st.info("Input values used for prediction:")
                 input_df = pd.DataFrame([feature_values], columns=selected_features)
                 st.dataframe(input_df)
-                
-                # Compare with known target value from your screenshots
-                target_value = 85349
-                diff = target_value - prediction
-                percent_diff = (diff / target_value) * 100
-                
-                if abs(percent_diff) < 5:
-                    accuracy_color = "green"
-                elif abs(percent_diff) < 10:
-                    accuracy_color = "orange"
-                else:
-                    accuracy_color = "red"
-                    
-                if abs(percent_diff) < 15:  # Only show reference if somewhat close
-                    st.markdown(
-                        f"<span style='color:{accuracy_color}'>Difference from reference ($85,349): "
-                        f"${diff:,.2f} ({percent_diff:.2f}%)</span>", 
-                        unsafe_allow_html=True
-                    )
         
         # Display model info
         st.subheader("Model Information")
@@ -261,3 +283,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+ 
