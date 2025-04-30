@@ -151,11 +151,7 @@ def main():
             if prediction is not None:
                 st.success(f'Estimated BTC price: ${prediction:,.2f}')
                 
-                # Display input values for reference
-                st.info("Input values used for prediction:")
-                input_df = pd.DataFrame([feature_values], columns=selected_features)
-                st.dataframe(input_df)
-        
+                  
         # Display model info
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.4f}")
