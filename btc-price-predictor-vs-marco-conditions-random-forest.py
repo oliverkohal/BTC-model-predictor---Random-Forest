@@ -11,7 +11,7 @@ from utils import load_data, preprocess_data, train_model, make_prediction, get_
 FEATURE_DISPLAY_NAMES = {
     'gold_price_usd': 'Gold Price in USD',
     'SP500': 'S&P 500',
-    'fed_funds_rate': 'Fed Funds Rate',
+    'fed_funds_rate': 'Fed Funds Rate in %',
     'US_inflation': 'US Inflation Rate in %',
     'US_M2_money_supply_in_billions': 'US M2 Money Supply in Billions'
 }
