@@ -125,15 +125,26 @@ def main():
         for feature in selected_features:
             min_val, max_val = get_min_max_values(clean_df, feature)
             
-            # Round min and max values to integers to remove decimals
-            min_val = int(min_val)
-            max_val = int(max_val)
+            # Use median as default value
+            default_val = float(clean_df[feature].dropna().median())
             
-            # Use median as default value (rounded to integer)
-            default_val = int(float(clean_df[feature].dropna().median()))
-                
             # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
+            
+            # Determine if this feature should show decimals
+            if feature in ['fed_funds_rate', 'US_inflation']:
+                # For Fed Funds Rate and US Inflation, keep decimals
+                # Round to 2 decimal places for cleaner display
+                min_val = round(min_val, 2)
+                max_val = round(max_val, 2)
+                default_val = round(default_val, 2)
+                step = 0.01  # Use small step size for precise control
+            else:
+                # For other features, round to integers
+                min_val = int(min_val)
+                max_val = int(max_val)
+                default_val = int(default_val)
+                step = 1  # Use step of 1 for integer values
             
             # Use friendly display name for the slider
             display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
@@ -143,7 +154,7 @@ def main():
                 min_value=min_val,
                 max_value=max_val,
                 value=default_val,
-                step=1,  # Set step to 1 for integer values only
+                step=step,
                 key=f"slider_{feature}"
             )
             feature_values.append(feature_val)
