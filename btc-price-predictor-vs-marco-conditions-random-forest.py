@@ -170,10 +170,7 @@ def main():
         st.write(f"Model R-squared: {r_squared:.4f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
         
-        if r_squared > 0.9:
-            st.write(f"R² of {r_squared:.3f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
-        elif r_squared > 0.8:
-            st.write(f"R² of {r_squared:.3f} is quite strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
+        st.write(f"R² of {r_squared:.3f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
 
         st.write(f"RMSE of {rmse:,.2f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
