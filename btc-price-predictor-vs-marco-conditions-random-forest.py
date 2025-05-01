@@ -172,7 +172,7 @@ def main():
         
         st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
 
-        st.write(f"RMSE of {rmse:,.2f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
+        st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
         # Display feature importance
         st.subheader("Feature Importance Analysis")  # Changed from "Feature Importance" to be more specific
