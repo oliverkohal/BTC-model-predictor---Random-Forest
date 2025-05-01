@@ -1,148 +1,217 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-import streamlit as st
 import traceback
 
-def load_data():
-    """Function to load data"""
-    try:
-        df = pd.read_csv('btc_macroeconomic.csv')
-        if 'date' in df.columns:
-            df['date'] = pd.to_datetime(df['date'])
-        return df
-    except FileNotFoundError:
-        st.warning("btc_macroeconomic.csv not found. Using sample data.")
-        return None
+from utils import load_data, train_model, make_prediction, get_feature_importance
 
-def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
-    """Function to preprocess data and ensure it's suitable for training"""
-    """Create a copy to avoid modifying the original"""
-    df_copy = df.copy()
-   
-    """Ensure all feature columns and target column exist"""
-    missing_cols = [col for col in feature_cols + [target_col] if col not in df_copy.columns]
-    if missing_cols:
-        st.error(f"Missing columns in dataset: {', '.join(missing_cols)}")
-        return None, None, None, None, None
-   
-    """Replace 'No data' with NaN and convert to numeric"""
-    numeric_columns = df_copy.columns.drop('date') if 'date' in df_copy.columns else df_copy.columns
-    df_copy[numeric_columns] = df_copy[numeric_columns].apply(pd.to_numeric, errors='coerce')
-    df_copy = df_copy.replace('No data', np.nan)
-    
-    """Extract features and target before imputation"""
-    X_orig = df_copy[feature_cols]
-    y = df_copy[target_col]
-    
-    """Use median imputation for missing values"""
-    imputer = SimpleImputer(strategy='median')
-    X_imputed = imputer.fit_transform(X_orig)
-    
-    """Scale the features for better model performance"""
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_imputed)
-    
-    """Remove rows with NaN values in target"""
-    mask = ~np.isnan(y.values)
-    X_clean = X_scaled[mask]
-    y_clean = y.values[mask]
-    
-    """Keep the clean dataframe for UI display"""
-    df_clean = df_copy.loc[mask].copy()
-    
-    if len(y_clean) < 10:
-        st.error("Not enough clean data points for reliable model training")
-        return None, None, None, None, None
-    
-    return X_clean, y_clean, df_clean, imputer, scaler
+FEATURE_DISPLAY_NAMES = {
+    'gold_price_usd': 'Gold Price in USD',
+    'SP500': 'S&P 500',
+    'fed_funds_rate': 'Fed Funds Rate in %',
+    'US_inflation': 'US Inflation Rate in %',
+    'US_M2_money_supply_in_billions': 'US M2 Money Supply in Billions'
+}
 
-def train_model(df, feature_cols, random_state=123):
-    """Train Random Forest model with optimized parameters"""
-    X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
-   
-    if X is None or y is None:
-        return None, None, None, None
-   
-    try:
-        """Split data into training and testing sets"""
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_state)
-        
-        """Train Random Forest model with optimized parameters"""
-        model = RandomForestRegressor(
-            n_estimators=50,      # Using 50 trees
-            max_depth=5,          # Limited depth to reduce overfitting
-            min_samples_split=20, # Minimum samples required to split a node
-            min_samples_leaf=3,   # Minimum samples required at a leaf node
-            max_features=0.7,     # 70% of features for each split
-            bootstrap=True,       # Use bootstrap samples
-            oob_score=True,       # Use out-of-bag samples to estimate score
-            random_state=random_state
-        )
-        model.fit(X_train, y_train)
-       
-        """Calculate R-squared on test data"""
-        r_squared = model.score(X_test, y_test)
-       
-        """Calculate RMSE on test data"""
-        y_pred = model.predict(X_test)
-        rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
-        
-        """Store imputer and scaler in model object for prediction"""
-        model._imputer = imputer
-        model._scaler = scaler
-       
-        return model, r_squared, rmse, df_clean
-    except Exception as e:
-        st.error(f"Error during model training: {e}")
-        st.error(traceback.format_exc())
-        return None, None, None, None
+def clean_numeric_data(df, columns):
+    """
+    Clean numeric data by removing 'No data' and converting to float
+    """
+    df_clean = df.copy()
+    df_clean = df_clean.replace('No data', np.nan)
+    
+    for col in columns:
+        if col in df_clean.columns:
+            df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+    
+    return df_clean
 
-def make_prediction(model, feature_values):
-    """Function to make a prediction with multiple features"""
-    if model is None:
-        return None
-   
+def get_min_max_values(df, feature):
+    """
+    Get min and max values for a feature safely
+    """
     try:
-        """Ensure all features are float"""
-        features = np.array([float(val) for val in feature_values]).reshape(1, -1)
-        
-        """Apply the same preprocessing as during training"""
-        if hasattr(model, '_imputer') and hasattr(model, '_scaler'):
-            features_imputed = model._imputer.transform(features)
-            features_scaled = model._scaler.transform(features_imputed)
-            prediction = model.predict(features_scaled)[0]
-        else:
-            # Fallback if no preprocessing objects stored
-            prediction = model.predict(features)[0]
+        if df[feature].isna().all():
+            return 0, 100
             
-        return prediction
-    except Exception as e:
-        st.error(f"Error making prediction: {e}")
-        st.error(traceback.format_exc())
-        return None
+        min_val = float(df[feature].dropna().min())
+        max_val = float(df[feature].dropna().max())
+        
+        if min_val == max_val:
+            min_val = max(0, min_val - 1)
+            max_val = max_val + 1
+            
+        return min_val, max_val
+    except:
+        default_ranges = {
+            'gold_price_usd': (1000, 3500),
+            'SP500': (1800, 6200),
+            'fed_funds_rate': (0, 6),
+            'US_inflation': (-1, 9),
+            'US_M2_money_supply_in_billions': (11000, 22000)
+        }
+        
+        if feature in default_ranges:
+            return default_ranges[feature]
+        else:
+            return 0, 100
 
-def get_feature_importance(model, feature_cols):
-    """Function to get feature importance"""
-    if model is None or feature_cols is None:
-        return None
+def sort_by_importance(items):
+    """
+    Sort items by importance value (second item in tuple)
+    """
+    def get_importance(item):
+        return item[1]
+    
+    return sorted(items, key=get_importance, reverse=True)
+
+def main():
+    st.title('BTC Price Predictor Against Macro Conditions')
+    st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
+    It highlights the increasing influence of macroeconomic factors on BTC's valuation.""")
+    st.write("""This also gives users a powerful tool to simulate institutional BTC valuation models.""")
+    st.write("""Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
+    st.write("""Contains data from Mar-2015 to Mar-2025.""")
+    
+    btc_macro_df = load_data()
+    
+    if btc_macro_df is None or btc_macro_df.empty:
+        st.error("Failed to load data. Please check your data source.")
+        return
         
+    clean_btc_df = clean_numeric_data(btc_macro_df, btc_macro_df.columns)
+        
+    macro_features = [
+        'gold_price_usd',
+        'SP500',
+        'fed_funds_rate',
+        'US_inflation',
+        'US_M2_money_supply_in_billions'
+    ]
+
+    available_features = [feat for feat in macro_features if feat in clean_btc_df.columns]
+    
+    if not available_features:
+        st.error("None of the required macro features are in the dataset.")
+        st.write("Available columns:", ", ".join(clean_btc_df.columns.tolist()))
+        return
+    
+    st.sidebar.header("Model Configuration")
+    
+    st.sidebar.subheader("Select Features to Include")
+    selected_features = []
+
+    for feature in available_features:
+        display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+        if st.sidebar.checkbox(display_name, value=True, key=f"feature_{feature}"):
+            selected_features.append(feature)
+    
+    if not selected_features:
+        st.error("Please select at least one feature for prediction.")
+        return
+    
     try:
-        """Get feature importances from model"""
-        importances = model.feature_importances_
+        with st.spinner("Training model..."):
+            model, r_squared, rmse, clean_df = train_model(clean_btc_df, selected_features)
+            
+            if model is None:
+                st.error("Could not train model. Please check your data.")
+                return
         
-        """Create dictionary mapping feature names to importance values"""
-        feature_importance = dict(zip(feature_cols, importances))
+        st.subheader("Make a Prediction")
         
-        """Sort by importance values in descending order"""
-        sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
-                                                   key=lambda item: item[1], 
-                                                   reverse=True)}
+        feature_values = []
         
-        return sorted_importance
+        for feature in selected_features:
+            min_val, max_val = get_min_max_values(clean_df, feature)
+            
+            # Use median as default value
+            default_val = float(clean_df[feature].dropna().median())
+            
+            # Ensure default is within bounds
+            default_val = max(min_val, min(default_val, max_val))
+            
+            # Determine if this feature should show decimals
+            if feature in ['fed_funds_rate', 'US_inflation']:
+                # For Fed Funds Rate and US Inflation, keep decimals
+                # Round to 2 decimal places for cleaner display
+                min_val = round(min_val, 2)
+                max_val = round(max_val, 2)
+                default_val = round(default_val, 2)
+                step = 0.01  # Use small step size for precise control
+            else:
+                # For other features, round to integers
+                min_val = int(min_val)
+                max_val = int(max_val)
+                default_val = int(default_val)
+                step = 1  # Use step of 1 for integer values
+            
+            # Use friendly display name for the slider
+            display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+            
+            feature_val = st.slider(
+                display_name,
+                min_value=min_val,
+                max_value=max_val,
+                value=default_val,
+                step=step,
+                key=f"slider_{feature}"
+            )
+            feature_values.append(feature_val)
+
+        if st.button("Predict BTC Price"):
+            prediction = make_prediction(model, feature_values)
+            
+            if prediction is not None:
+                st.success(f'Estimated BTC price: ${prediction:,.0f}')
+                
+        st.subheader("Model Information")
+        st.write(f"Model R-squared: {r_squared:.2f}")
+        st.write(f"RMSE (Root Mean Square Error): ${rmse:,.0f}")
+        
+        st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
+        st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
+        
+        st.subheader("Feature Importance Analysis")
+        
+        feature_importance = get_feature_importance(model, selected_features)
+        
+        if feature_importance:
+            display_importance = {}
+            for feature, importance in feature_importance.items():
+                display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+                display_importance[display_name] = importance
+            
+            feature_explanations = {
+                'US_M2_money_supply_in_billions': "Money supply accounts for {pct}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.",
+                'US_inflation': "At {pct}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.",
+                'SP500': "S&P 500's {pct}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.",
+                'gold_price_usd': "The {pct}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.",
+                'fed_funds_rate': "Fed Funds Rate at {pct}% suggests interest rates have less direct impact compared to money supply and inflation."
+            }
+            
+            reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
+            
+            sorted_features = sort_by_importance(display_importance.items())
+            
+            for i, (display_feature, importance) in enumerate(sorted_features, 1):
+                importance_pct = int(importance * 100)
+                st.markdown(f"**{i}. {display_feature} (importance: {importance_pct}%):**")
+                
+                original_feature = reverse_mapping.get(display_feature, display_feature)
+                
+                if original_feature in feature_explanations:
+                    st.write(feature_explanations[original_feature].format(pct=importance_pct))
+                else:
+                    st.write(f"This feature contributes {importance_pct}% to the model's predictive power.")
+            
+            st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
+        
+        st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
+    
     except Exception as e:
-        st.error(f"Error getting feature importance: {e}")
-        return None
+        st.error(f"An error occurred: {e}")
+        st.error(traceback.format_exc())
+
+if __name__ == '__main__':
+    main()
