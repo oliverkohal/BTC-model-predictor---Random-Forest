@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
@@ -60,13 +61,33 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     
     return X_clean, y_clean, df_clean, imputer, scaler
 
+def calculate_mape(y_true, y_pred):
+    """
+    Calculate Mean Absolute Percentage Error (MAPE)
+    MAPE = (100/n) * sum(|actual - predicted|/|actual|)
+    
+    Args:
+        y_true: Array of actual values
+        y_pred: Array of predicted values
+        
+    Returns:
+        MAPE value as a percentage
+    """
+    # Avoid division by zero by excluding zero values from calculation
+    mask = y_true != 0
+    if not np.any(mask):
+        return np.nan  # Return NaN if all actual values are zero
+    
+    # Calculate MAPE for non-zero values
+    return 100 * np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask]))
+
 def train_model(df, feature_cols, random_state=123):
     """Train Random Forest model with optimized parameters"""
     """Preprocess data"""
     X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
    
     if X is None or y is None:
-        return None, None, None, None
+        return None, None, None, None, None
    
     try:
         """Split data into training and testing sets"""
@@ -92,15 +113,18 @@ def train_model(df, feature_cols, random_state=123):
         y_pred = model.predict(X_test)
         rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
         
+        """Calculate MAPE on test data"""
+        mape = calculate_mape(y_test, y_pred)
+        
         """Store imputer and scaler in model object for prediction"""
         model._imputer = imputer
         model._scaler = scaler
        
-        return model, r_squared, rmse, df_clean
+        return model, r_squared, rmse, mape, df_clean
     except Exception as e:
         st.error(f"Error during model training: {e}")
         st.error(traceback.format_exc())
-        return None, None, None, None
+        return None, None, None, None, None
 
 def make_prediction(model, feature_values):
     """Function to make a prediction with multiple features"""
