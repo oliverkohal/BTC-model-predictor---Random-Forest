@@ -9,7 +9,7 @@ from utils import load_data, preprocess_data, train_model, make_prediction, get_
 
 # Define feature display names mapping
 
-feature_display_names = {
+FEATURE_DISPLAY_NAMES = {
     'gold_price_usd': 'Gold Price in USD',
     'SP500': 'S&P 500',
     'fed_funds_rate': 'Fed Funds Rate in %',
