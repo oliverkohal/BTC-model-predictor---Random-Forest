@@ -73,13 +73,13 @@ def train_model(df, feature_cols, random_state=123):
         
         """Train Random Forest model with optimized parameters"""
         model = RandomForestRegressor(
-            n_estimators=50,      # Using 50 trees
-            max_depth=5,          # Limited depth to reduce overfitting
-            min_samples_split=20, # Minimum samples required to split a node
-            min_samples_leaf=3,   # Minimum samples required at a leaf node
-            max_features=0.7,     # 70% of features for each split
-            bootstrap=True,       # Use bootstrap samples
-            oob_score=True,       # Use out-of-bag samples to estimate score
+            n_estimators=50,      """Using 50 trees"""
+            max_depth=5,          """Limited depth to reduce overfitting"""
+            min_samples_split=20, """Minimum samples required to split a node"""
+            min_samples_leaf=3,   """Minimum samples required at a leaf node"""
+            max_features=0.7,     """70% of features for each split"""
+            bootstrap=True,       """Use bootstrap samples"""
+            oob_score=True,       """Use out-of-bag samples to estimate score"""
             random_state=random_state
         )
         model.fit(X_train, y_train)
