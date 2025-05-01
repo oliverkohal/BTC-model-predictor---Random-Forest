@@ -7,9 +7,8 @@ import os
 
 from utils import load_data, preprocess_data, train_model, make_prediction, get_feature_importance
 
-#Define feature display names mapping
-
-FEATURE_DISPLAY_NAMES = {
+"""Define feature display names mapping"""
+feature_display_names = {
     'gold_price_usd': 'Gold Price in USD',
     'SP500': 'S&P 500',
     'fed_funds_rate': 'Fed Funds Rate in %',
@@ -23,10 +22,10 @@ def clean_numeric_data(df, columns):
     """
     df_clean = df.copy()
     
-    # Replace 'No data' with NaN
+    """Replace 'No data' with NaN"""
     df_clean = df_clean.replace('No data', np.nan)
     
-    # Convert to numeric
+    """Convert to numeric"""
     for col in columns:
         if col in df_clean.columns:
             df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
@@ -38,22 +37,22 @@ def get_min_max_values(df, feature):
     Get min and max values for a feature safely
     """
     try:
-        # Handle case where all values are NaN
+        """Handle case where all values are NaN"""
         if df[feature].isna().all():
             return 0, 100  # Default fallback values
             
-        # Get min and max, ignoring NaN values
+        """Get min and max, ignoring NaN values"""
         min_val = float(df[feature].dropna().min())
         max_val = float(df[feature].dropna().max())
         
-        # Ensure min != max to avoid slider errors
+        """Ensure min != max to avoid slider errors"""
         if min_val == max_val:
             min_val = max(0, min_val - 1)
             max_val = max_val + 1
             
         return min_val, max_val
     except:
-        # Fallback default values
+        """Fallback default values"""
         default_ranges = {
             'gold_price_usd': (1000, 3500),
             'SP500': (1800, 6200),
@@ -75,17 +74,17 @@ def main():
     st.write("""Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
     st.write("""Contains data from Mar-2015 to Mar-2025.""")
     
-    # Load data
+    """Load data"""
     btc_macro_df = load_data()
     
     if btc_macro_df is None or btc_macro_df.empty:
         st.error("Failed to load data. Please check your data source.")
         return
         
-    # Clean the dataframe to handle 'No data' and convert to numeric
+    """Clean the dataframe to handle 'No data' and convert to numeric"""
     clean_btc_df = clean_numeric_data(btc_macro_df, btc_macro_df.columns)
         
-    # Define the specific macro features to use
+    """Define the specific macro features to use"""
     macro_features = [
         'gold_price_usd',
         'SP500',
@@ -94,24 +93,24 @@ def main():
         'US_M2_money_supply_in_billions'
     ]
 
-    # Verify which features are available in the dataset
+    """Verify which features are available in the dataset"""
     available_features = [feat for feat in macro_features if feat in clean_btc_df.columns]
     
     if not available_features:
         st.error("None of the required macro features are in the dataset.")
-        # Show available columns
+        """Show available columns"""
         st.write("Available columns:", ", ".join(clean_btc_df.columns.tolist()))
         return
     
-    # Sidebar for model configuration
+    """Sidebar for model configuration"""
     st.sidebar.header("Model Configuration")
     
-    # Let user select features to include
+    """Let user select features to include"""
     st.sidebar.subheader("Select Features to Include")
     selected_features = []
 
     for feature in available_features:
-        display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+        display_name = feature_display_names.get(feature, feature)
         if st.sidebar.checkbox(display_name, value=True, key=f"feature_{feature}"):
             selected_features.append(feature)
     
@@ -119,7 +118,7 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Train model with selected features
+    """Train model with selected features"""
     try:
         with st.spinner("Training model..."):
             model, r_squared, rmse, clean_df = train_model(clean_btc_df, selected_features)
@@ -128,24 +127,24 @@ def main():
                 st.error("Could not train model. Please check your data.")
                 return
         
-        # User input for prediction
+        """User input for prediction"""
         st.subheader("Make a Prediction")
         
-        # Create input sliders for each feature
+        """Create input sliders for each feature"""
         feature_values = []
         
-        # Make sure to use the actual column names from your dataset
+        """Make sure to use the actual column names from your dataset"""
         for feature in selected_features:
             min_val, max_val = get_min_max_values(clean_df, feature)
             
-            # Use median as default value
+            """Use median as default value"""
             default_val = float(clean_df[feature].dropna().median())
                 
-            # Ensure default is within bounds
+            """Ensure default is within bounds"""
             default_val = max(min_val, min(default_val, max_val))
             
-            # Use friendly display name for the slider
-            display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+            """Use friendly display name for the slider"""
+            display_name = feature_display_names.get(feature, feature)
             
             feature_val = st.slider(
                 display_name,
@@ -157,7 +156,7 @@ def main():
             )
             feature_values.append(feature_val)
 
-        # Predict button
+        """Predict button"""
         if st.button("Predict BTC Price"):
             prediction = make_prediction(model, feature_values)
             
@@ -165,7 +164,7 @@ def main():
                 st.success(f'Estimated BTC price: ${prediction:,.2f}')
                 
                   
-        # Display model info
+        """Display model info"""
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.4f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
@@ -177,44 +176,44 @@ def main():
 
         st.write(f"RMSE of {rmse:,.2f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
-        # Display feature importance
-        st.subheader("Feature Importance Analysis")  # Changed from "Feature Importance" to be more specific
+        """Display feature importance"""
+        st.subheader("Feature Importance Analysis")
         
-        # Get feature importance
+        """Get feature importance"""
         feature_importance = get_feature_importance(model, selected_features)
         
-        # Create a bar chart for feature importance
+        """Create a bar chart for feature importance"""
         if feature_importance:
-            # Convert feature importance to use display names
+            """Convert feature importance to use display names"""
             display_importance = {}
             for feature, importance in feature_importance.items():
-                display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+                display_name = feature_display_names.get(feature, feature)
                 display_importance[display_name] = importance
             
             features = list(display_importance.keys())
             importance_values = list(display_importance.values())
             
-            # Create a DataFrame for Plotly
+            """Create a DataFrame for Plotly"""
             importance_df = pd.DataFrame({
                 'Feature': features,
                 'Importance': importance_values
             })
             
-            # Sort by importance
+            """Sort by importance"""
             importance_df = importance_df.sort_values('Importance', ascending=False)
                         
-            # Create mapping of display names back to original names for the conditional statements
-            reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
+            """Create mapping of display names back to original names for the conditional statements"""
+            reverse_mapping = {v: k for k, v in feature_display_names.items()}
             
-            # Display each feature's importance with analysis
+            """Display each feature's importance with analysis"""
             for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
                                                            key=lambda x: x[1], 
                                                            reverse=True), 1):
-                # Format importance as whole percentage (no decimal)
+                """Format importance as whole percentage (no decimal)"""
                 importance_pct = int(importance * 100)
                 st.markdown(f"**{i}. {display_feature} (importance: {importance_pct}%):**")
                 
-                # Get original feature name for conditional logic
+                """Get original feature name for conditional logic"""
                 original_feature = reverse_mapping.get(display_feature, display_feature)
                 
                 if original_feature == 'US_M2_money_supply_in_billions':
@@ -237,7 +236,7 @@ def main():
             
             st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
         
-        # Add disclaimer
+        """Add disclaimer"""
         st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
     
     except Exception as e:
