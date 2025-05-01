@@ -95,7 +95,6 @@ def train_model(df, feature_cols, random_state=123):
         model._imputer = imputer
         model._scaler = scaler
        
-        # Return only the 4 values that Streamlit expects
         return model, r_squared, rmse, df_clean
     except Exception as e:
         st.error(f"Error during model training: {e}")
