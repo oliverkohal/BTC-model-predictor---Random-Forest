@@ -132,13 +132,22 @@ def get_feature_importance(model, feature_cols):
         return None
         
     try:
+        # Get feature importances from model
         importances = model.feature_importances_
+        
+        # Create dictionary mapping feature names to importance values
         feature_importance = dict(zip(feature_cols, importances))
-        sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
-                                                    key=lambda item: item[1], 
-                                                    reverse=True)}
+        
+        # Sort by importance values in descending order
+        importance_pairs = list(feature_importance.items())
+        importance_pairs.sort(key=itemgetter(1), reverse=True)
+        
+        # Create new ordered dictionary from sorted pairs
+        sorted_importance = {}
+        for feature_name, importance_value in importance_pairs:
+            sorted_importance[feature_name] = importance_value
+            
         return sorted_importance
-
     except Exception as e:
         st.error(f"Error getting feature importance: {e}")
         return None
