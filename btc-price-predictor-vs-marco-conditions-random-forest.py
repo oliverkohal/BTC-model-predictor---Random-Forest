@@ -7,6 +7,15 @@ import os
 
 from utils import load_data, preprocess_data, train_model, make_prediction, get_feature_importance
 
+# Define feature display names mapping
+FEATURE_DISPLAY_NAMES = {
+    'gold_price_usd': 'Gold Price in USD',
+    'SP500': 'S&P 500',
+    'fed_funds_rate': 'Fed Funds Rate',
+    'US_inflation': 'US Inflation Rate in %',
+    'US_M2_money_supply_in_billions': 'US M2 Money Supply in Billions'
+}
+
 def clean_numeric_data(df, columns):
     """
     Clean numeric data by removing 'No data' and converting to float
@@ -100,7 +109,8 @@ def main():
     selected_features = []
 
     for feature in available_features:
-        if st.sidebar.checkbox(feature, value=True, key=f"feature_{feature}"):
+        display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+        if st.sidebar.checkbox(display_name, value=True, key=f"feature_{feature}"):
             selected_features.append(feature)
     
     if not selected_features:
@@ -132,8 +142,11 @@ def main():
             # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
             
+            # Use friendly display name for the slider
+            display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+            
             feature_val = st.slider(
-                f'{feature}',
+                display_name,
                 min_value=min_val,
                 max_value=max_val,
                 value=default_val,
@@ -170,8 +183,14 @@ def main():
         
         # Create a bar chart for feature importance
         if feature_importance:
-            features = list(feature_importance.keys())
-            importance_values = list(feature_importance.values())
+            # Convert feature importance to use display names
+            display_importance = {}
+            for feature, importance in feature_importance.items():
+                display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
+                display_importance[display_name] = importance
+            
+            features = list(display_importance.keys())
+            importance_values = list(display_importance.values())
             
             # Create a DataFrame for Plotly
             importance_df = pd.DataFrame({
@@ -181,31 +200,36 @@ def main():
             
             # Sort by importance
             importance_df = importance_df.sort_values('Importance', ascending=False)
-            
                        
             # Create expandable sections for feature importance analysis
             with st.expander("Feature Importance Analysis", expanded=True):
                 st.write("**Random Forest Feature Importance Analysis:**")
                 
+                # Create mapping of display names back to original names for the conditional statements
+                reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
+                
                 # Display each feature's importance with analysis
-                for i, (feature, importance) in enumerate(sorted(feature_importance.items(), 
+                for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
                                                                key=lambda x: x[1], 
                                                                reverse=True), 1):
-                    st.markdown(f"**{i}. {feature} (importance: {importance:.2f}):**")
+                    st.markdown(f"**{i}. {display_feature} (importance: {importance:.2f}):**")
                     
-                    if feature == 'US_M2_money_supply_in_billions':
+                    # Get original feature name for conditional logic
+                    original_feature = reverse_mapping.get(display_feature, display_feature)
+                    
+                    if original_feature == 'US_M2_money_supply_in_billions':
                         st.write(f"Money supply accounts for {importance*100:.1f}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
                     
-                    elif feature == 'US_inflation':
+                    elif original_feature == 'US_inflation':
                         st.write(f"At {importance*100:.1f}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
                     
-                    elif feature == 'SP500':
+                    elif original_feature == 'SP500':
                         st.write(f"S&P 500's {importance*100:.1f}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
                     
-                    elif feature == 'gold_price_usd':
+                    elif original_feature == 'gold_price_usd':
                         st.write(f"The {importance*100:.1f}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
                     
-                    elif feature == 'fed_funds_rate':
+                    elif original_feature == 'fed_funds_rate':
                         st.write(f"Fed Funds Rate at {importance*100:.1f}% suggests interest rates have less direct impact compared to money supply and inflation.")
                     
                     else:
@@ -222,5 +246,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-     
