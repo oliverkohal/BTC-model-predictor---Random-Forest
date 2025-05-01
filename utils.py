@@ -6,10 +6,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 import streamlit as st
 import traceback
-from operator import itemgetter
 
-"""Function to load data"""
 def load_data():
+    """Function to load data"""
     try:
         df = pd.read_csv('btc_macroeconomic.csv')
         if 'date' in df.columns:
@@ -19,8 +18,8 @@ def load_data():
         st.warning("btc_macroeconomic.csv not found. Using sample data.")
         return None
 
-"""Function to preprocess data and ensure it's suitable for training"""
 def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
+    """Function to preprocess data and ensure it's suitable for training"""
     """Create a copy to avoid modifying the original"""
     df_copy = df.copy()
    
@@ -62,6 +61,7 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     return X_clean, y_clean, df_clean, imputer, scaler
 
 def train_model(df, feature_cols, random_state=123):
+    """Train Random Forest model with optimized parameters"""
     """Preprocess data"""
     X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
    
@@ -102,8 +102,8 @@ def train_model(df, feature_cols, random_state=123):
         st.error(traceback.format_exc())
         return None, None, None, None
 
-"""Function to make a prediction with multiple features"""
 def make_prediction(model, feature_values):
+    """Function to make a prediction with multiple features"""
     if model is None:
         return None
    
@@ -112,7 +112,6 @@ def make_prediction(model, feature_values):
         features = np.array([float(val) for val in feature_values]).reshape(1, -1)
         
         """Apply the same preprocessing as during training"""
-        # Get imputer and scaler from model object
         if hasattr(model, '_imputer') and hasattr(model, '_scaler'):
             features_imputed = model._imputer.transform(features)
             features_scaled = model._scaler.transform(features_imputed)
@@ -127,8 +126,8 @@ def make_prediction(model, feature_values):
         st.error(traceback.format_exc())
         return None
 
-    """Function to get feature importance"""
 def get_feature_importance(model, feature_cols):
+    """Function to get feature importance"""
     if model is None or feature_cols is None:
         return None
         
@@ -140,14 +139,10 @@ def get_feature_importance(model, feature_cols):
         feature_importance = dict(zip(feature_cols, importances))
         
         """Sort by importance values in descending order"""
-        importance_pairs = list(feature_importance.items())
-        importance_pairs.sort(key=itemgetter(1), reverse=True)
+        sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
+                                                   key=lambda item: item[1], 
+                                                   reverse=True)}
         
-        """Create new ordered dictionary from sorted pairs"""
-        sorted_importance = {}
-        for feature_name, importance_value in importance_pairs:
-            sorted_importance[feature_name] = importance_value
-            
         return sorted_importance
     except Exception as e:
         st.error(f"Error getting feature importance: {e}")
