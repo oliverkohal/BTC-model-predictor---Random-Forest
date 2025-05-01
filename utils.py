@@ -62,7 +62,6 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
 
 def train_model(df, feature_cols, random_state=123):
     """Train Random Forest model with optimized parameters"""
-    """Preprocess data"""
     X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
    
     if X is None or y is None:
