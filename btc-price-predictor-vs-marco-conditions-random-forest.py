@@ -211,28 +211,30 @@ def main():
             for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
                                                            key=lambda x: x[1], 
                                                            reverse=True), 1):
-                st.markdown(f"**{i}. {display_feature} (importance: {importance:.2f}):**")
+                # Format importance as percentage with % sign
+                importance_pct = importance * 100
+                st.markdown(f"**{i}. {display_feature} (importance: {importance:.2f} / {importance_pct:.1f}%):**")
                 
                 # Get original feature name for conditional logic
                 original_feature = reverse_mapping.get(display_feature, display_feature)
                 
                 if original_feature == 'US_M2_money_supply_in_billions':
-                    st.write(f"Money supply accounts for {importance*100:.1f}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
+                    st.write(f"Money supply accounts for {importance_pct:.1f}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
                 
                 elif original_feature == 'US_inflation':
-                    st.write(f"At {importance*100:.1f}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
+                    st.write(f"At {importance_pct:.1f}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
                 
                 elif original_feature == 'SP500':
-                    st.write(f"S&P 500's {importance*100:.1f}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
+                    st.write(f"S&P 500's {importance_pct:.1f}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
                 
                 elif original_feature == 'gold_price_usd':
-                    st.write(f"The {importance*100:.1f}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
+                    st.write(f"The {importance_pct:.1f}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
                 
                 elif original_feature == 'fed_funds_rate':
-                    st.write(f"Fed Funds Rate at {importance*100:.1f}% suggests interest rates have less direct impact compared to money supply and inflation.")
+                    st.write(f"Fed Funds Rate at {importance_pct:.1f}% suggests interest rates have less direct impact compared to money supply and inflation.")
                 
                 else:
-                    st.write(f"This feature contributes {importance*100:.1f}% to the model's predictive power.")
+                    st.write(f"This feature contributes {importance_pct:.1f}% to the model's predictive power.")
             
             st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
         
