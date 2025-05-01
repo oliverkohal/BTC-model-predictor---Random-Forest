@@ -1,13 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import warnings
 import traceback
-import os
 
-from utils import load_data, preprocess_data, train_model, make_prediction, get_feature_importance
-
-# Define feature display names mapping
+from utils import load_data, train_model, make_prediction, get_feature_importance
 
 FEATURE_DISPLAY_NAMES = {
     'gold_price_usd': 'Gold Price in USD',
@@ -22,11 +18,8 @@ def clean_numeric_data(df, columns):
     Clean numeric data by removing 'No data' and converting to float
     """
     df_clean = df.copy()
-    
-    # Replace 'No data' with NaN
     df_clean = df_clean.replace('No data', np.nan)
     
-    # Convert to numeric
     for col in columns:
         if col in df_clean.columns:
             df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
@@ -38,22 +31,18 @@ def get_min_max_values(df, feature):
     Get min and max values for a feature safely
     """
     try:
-        # Handle case where all values are NaN
         if df[feature].isna().all():
-            return 0, 100  # Default fallback values
+            return 0, 100
             
-        # Get min and max, ignoring NaN values
         min_val = float(df[feature].dropna().min())
         max_val = float(df[feature].dropna().max())
         
-        # Ensure min != max to avoid slider errors
         if min_val == max_val:
             min_val = max(0, min_val - 1)
             max_val = max_val + 1
             
         return min_val, max_val
     except:
-        # Fallback default values
         default_ranges = {
             'gold_price_usd': (1000, 3500),
             'SP500': (1800, 6200),
@@ -65,7 +54,16 @@ def get_min_max_values(df, feature):
         if feature in default_ranges:
             return default_ranges[feature]
         else:
-            return 0, 100  # Generic fallback
+            return 0, 100
+
+def sort_by_importance(items):
+    """
+    Sort items by importance value (second item in tuple)
+    """
+    def get_importance(item):
+        return item[1]
+    
+    return sorted(items, key=get_importance, reverse=True)
 
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
@@ -75,17 +73,14 @@ def main():
     st.write("""Use the sliders to explore various economic scenarios—from highly favorable to challenging conditions—and observe their significant impact on Bitcoin's predicted price movement.""")
     st.write("""Contains data from Mar-2015 to Mar-2025.""")
     
-    # Load data
     btc_macro_df = load_data()
     
     if btc_macro_df is None or btc_macro_df.empty:
         st.error("Failed to load data. Please check your data source.")
         return
         
-    # Clean the dataframe to handle 'No data' and convert to numeric
     clean_btc_df = clean_numeric_data(btc_macro_df, btc_macro_df.columns)
         
-    # Define the specific macro features to use
     macro_features = [
         'gold_price_usd',
         'SP500',
@@ -94,19 +89,15 @@ def main():
         'US_M2_money_supply_in_billions'
     ]
 
-    # Verify which features are available in the dataset
     available_features = [feat for feat in macro_features if feat in clean_btc_df.columns]
     
     if not available_features:
         st.error("None of the required macro features are in the dataset.")
-        # Show available columns
         st.write("Available columns:", ", ".join(clean_btc_df.columns.tolist()))
         return
     
-    # Sidebar for model configuration
     st.sidebar.header("Model Configuration")
     
-    # Let user select features to include
     st.sidebar.subheader("Select Features to Include")
     selected_features = []
 
@@ -119,7 +110,6 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Train model with selected features
     try:
         with st.spinner("Training model..."):
             model, r_squared, rmse, clean_df = train_model(clean_btc_df, selected_features)
@@ -128,23 +118,15 @@ def main():
                 st.error("Could not train model. Please check your data.")
                 return
         
-        # User input for prediction
         st.subheader("Make a Prediction")
         
-        # Create input sliders for each feature
         feature_values = []
         
-        # Make sure to use the actual column names from your dataset
         for feature in selected_features:
             min_val, max_val = get_min_max_values(clean_df, feature)
-            
-            # Use median as default value
             default_val = float(clean_df[feature].dropna().median())
-                
-            # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
             
-            # Use friendly display name for the slider
             display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
             
             feature_val = st.slider(
@@ -157,86 +139,54 @@ def main():
             )
             feature_values.append(feature_val)
 
-        # Predict button
         if st.button("Predict BTC Price"):
             prediction = make_prediction(model, feature_values)
             
             if prediction is not None:
                 st.success(f'Estimated BTC price: ${prediction:,.2f}')
                 
-                  
-        # Display model info
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.2f}")
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.0f}")
         
         st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
-
         st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
-        # Display feature importance
-        st.subheader("Feature Importance Analysis")  # Changed from "Feature Importance" to be more specific
+        st.subheader("Feature Importance Analysis")
         
-        # Get feature importance
         feature_importance = get_feature_importance(model, selected_features)
         
-        # Create a bar chart for feature importance
         if feature_importance:
-            # Convert feature importance to use display names
             display_importance = {}
             for feature, importance in feature_importance.items():
                 display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
                 display_importance[display_name] = importance
             
-            features = list(display_importance.keys())
-            importance_values = list(display_importance.values())
+            feature_explanations = {
+                'US_M2_money_supply_in_billions': "Money supply accounts for {pct}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.",
+                'US_inflation': "At {pct}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.",
+                'SP500': "S&P 500's {pct}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.",
+                'gold_price_usd': "The {pct}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.",
+                'fed_funds_rate': "Fed Funds Rate at {pct}% suggests interest rates have less direct impact compared to money supply and inflation."
+            }
             
-            # Create a DataFrame for Plotly
-            importance_df = pd.DataFrame({
-                'Feature': features,
-                'Importance': importance_values
-            })
-            
-            # Sort by importance
-            importance_df = importance_df.sort_values('Importance', ascending=False)
-                        
-            # Create mapping of display names back to original names for the conditional statements
             reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
             
-            # Display each feature's importance with analysis
-            def get_importance(item): return item[1]
-
-            # Display each feature's importance with analysis
-            for i, (display_feature, importance) in enumerate(
-            sorted(display_importance.items(), key=get_importance, reverse=True), 1):
-                # Format importance as whole percentage (no decimal)
+            sorted_features = sort_by_importance(display_importance.items())
+            
+            for i, (display_feature, importance) in enumerate(sorted_features, 1):
                 importance_pct = int(importance * 100)
                 st.markdown(f"**{i}. {display_feature} (importance: {importance_pct}%):**")
                 
-                # Get original feature name for conditional logic
                 original_feature = reverse_mapping.get(display_feature, display_feature)
                 
-                if original_feature == 'US_M2_money_supply_in_billions':
-                    st.write(f"Money supply accounts for {importance_pct}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
-                
-                elif original_feature == 'US_inflation':
-                    st.write(f"At {importance_pct}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
-                
-                elif original_feature == 'SP500':
-                    st.write(f"S&P 500's {importance_pct}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
-                
-                elif original_feature == 'gold_price_usd':
-                    st.write(f"The {importance_pct}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
-                
-                elif original_feature == 'fed_funds_rate':
-                    st.write(f"Fed Funds Rate at {importance_pct}% suggests interest rates have less direct impact compared to money supply and inflation.")
-                
+                if original_feature in feature_explanations:
+                    st.write(feature_explanations[original_feature].format(pct=importance_pct))
                 else:
                     st.write(f"This feature contributes {importance_pct}% to the model's predictive power.")
             
             st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
         
-        # Add disclaimer
         st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
     
     except Exception as e:
