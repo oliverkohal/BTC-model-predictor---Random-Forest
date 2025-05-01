@@ -124,9 +124,18 @@ def main():
         
         for feature in selected_features:
             min_val, max_val = get_min_max_values(clean_df, feature)
-            default_val = float(clean_df[feature].dropna().median())
+            
+            # Round min and max values to integers to remove decimals
+            min_val = int(min_val)
+            max_val = int(max_val)
+            
+            # Use median as default value (rounded to integer)
+            default_val = int(float(clean_df[feature].dropna().median()))
+                
+            # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
             
+            # Use friendly display name for the slider
             display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
             
             feature_val = st.slider(
@@ -134,7 +143,7 @@ def main():
                 min_value=min_val,
                 max_value=max_val,
                 value=default_val,
-                step=(max_val - min_val) / 100,
+                step=1,  # Set step to 1 for integer values only
                 key=f"slider_{feature}"
             )
             feature_values.append(feature_val)
@@ -143,7 +152,7 @@ def main():
             prediction = make_prediction(model, feature_values)
             
             if prediction is not None:
-                st.success(f'Estimated BTC price: ${prediction:,.2f}')
+                st.success(f'Estimated BTC price: ${prediction:,.0f}')
                 
         st.subheader("Model Information")
         st.write(f"Model R-squared: {r_squared:.2f}")
