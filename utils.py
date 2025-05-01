@@ -6,7 +6,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 import streamlit as st
 import traceback
-from datetime import datetime
 
 def load_data():
     """Function to load data"""
@@ -91,7 +90,7 @@ def train_model(df, feature_cols, random_state=123):
     X, y, df_clean, imputer, scaler = preprocess_data(df, feature_cols)
    
     if X is None or y is None:
-        return None, None, None, None, None, None
+        return None, None, None, None, None
    
     try:
         """Split data into training and testing sets"""
@@ -118,21 +117,15 @@ def train_model(df, feature_cols, random_state=123):
         rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
         mape = calculate_mape(y_test, y_pred)
         
-        """Store test predictions for later date-filtered metrics"""
-        test_predictions = {
-            'y_test': y_test,
-            'y_pred': y_pred
-        }
-        
         """Store imputer and scaler in model object for prediction"""
         model._imputer = imputer
         model._scaler = scaler
        
-        return model, r_squared, rmse, df_clean, mape, test_predictions
+        return model, r_squared, rmse, df_clean, mape
     except Exception as e:
         st.error(f"Error during model training: {e}")
         st.error(traceback.format_exc())
-        return None, None, None, None, None, None
+        return None, None, None, None, None
 
 def make_prediction(model, feature_values):
     """Function to make a prediction with multiple features"""
@@ -180,50 +173,4 @@ def get_feature_importance(model, feature_cols):
         st.error(f"Error getting feature importance: {e}")
         return None
 
-def train_filtered_model(df, feature_cols, date_start, date_end, random_state=123):
-    """
-    Train a model using only data from a specific date range
-    
-    Args:
-        df: Original dataframe with date column
-        feature_cols: List of feature column names
-        date_start: Start date for filtering (string 'YYYY-MM-DD' or datetime)
-        date_end: End date for filtering (string 'YYYY-MM-DD' or datetime)
-        random_state: Random seed for reproducibility
-        
-    Returns:
-        Same return values as train_model()
-    """
-    try:
-        # Ensure we have the necessary data
-        if df is None or 'date' not in df.columns:
-            return None, None, None, None, None, None
-            
-        # Make a copy of the dataframe to avoid modifying the original
-        df_copy = df.copy()
-        
-        # Make sure date column is datetime type
-        if not pd.api.types.is_datetime64_any_dtype(df_copy['date']):
-            df_copy['date'] = pd.to_datetime(df_copy['date'])
-        
-        # Convert string dates to datetime if needed
-        if isinstance(date_start, str):
-            date_start = pd.to_datetime(date_start)
-        if isinstance(date_end, str):
-            date_end = pd.to_datetime(date_end)
-            
-        # Filter the dataframe to only include the date range
-        df_filtered = df_copy[df_copy['date'] >= date_start]
-        df_filtered = df_filtered[df_filtered['date'] <= date_end]
-        
-        if len(df_filtered) < 10:
-            st.warning(f"Not enough data points in the date range {date_start} to {date_end} for reliable model training")
-            return None, None, None, None, None, None
-            
-        # Train model on the filtered data
-        return train_model(df_filtered, feature_cols, random_state)
-    except Exception as e:
-        st.error(f"Error training filtered model: {e}")
-        st.error(traceback.format_exc())
-        return None, None, None, None, None, None
-    
+
