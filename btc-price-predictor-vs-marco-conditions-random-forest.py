@@ -56,6 +56,32 @@ def get_min_max_values(df, feature):
         else:
             return 0, 100
 
+def get_safe_median(df, feature):
+    """
+    Get median value for a feature safely
+    """
+    try:
+        if df[feature].isna().all():
+            return 50
+            
+        # Get the median and ensure it's a scalar value
+        median_val = df[feature].dropna().median()
+        # Convert to float to ensure we're returning a scalar
+        return float(median_val)
+    except:
+        default_medians = {
+            'gold_price_usd': 2000,
+            'SP500': 4000,
+            'fed_funds_rate': 2,
+            'US_inflation': 2,
+            'US_M2_money_supply_in_billions': 16000
+        }
+        
+        if feature in default_medians:
+            return default_medians[feature]
+        else:
+            return 50
+
 def sort_by_importance(items):
     """
     Sort items by importance value (second item in tuple)
@@ -112,7 +138,7 @@ def main():
     
     try:
         with st.spinner("Training model..."):
-            model, r_squared, rmse, clean_df,mape = train_model(clean_btc_df, selected_features)
+            model, r_squared, rmse, clean_df, mape = train_model(clean_btc_df, selected_features)
             
             if model is None:
                 st.error("Could not train model. Please check your data.")
@@ -125,8 +151,8 @@ def main():
         for feature in selected_features:
             min_val, max_val = get_min_max_values(clean_df, feature)
             
-            # Use median as default value
-            default_val = float(clean_df[feature].dropna().median())
+            # Use median as default value - safely
+            default_val = get_safe_median(clean_df, feature)
             
             # Ensure default is within bounds
             default_val = max(min_val, min(default_val, max_val))
