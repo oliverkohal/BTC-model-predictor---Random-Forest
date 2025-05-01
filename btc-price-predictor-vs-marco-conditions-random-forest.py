@@ -196,7 +196,7 @@ def main():
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.0f}")
         if mape is not None:
             st.write(f"MAPE (Mean Absolute Percentage Error): {mape:.0f}%")
-            st.write(f"MAPE means that, on average, the model's predictions are off by {mape:.1f}% of the actual Bitcoin price.")
+            st.write(f"MAPE means that, on average, the model's predictions are off by {mape:.0f}% of the actual Bitcoin price.")
         st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
         st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
