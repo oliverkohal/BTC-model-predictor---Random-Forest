@@ -201,10 +201,7 @@ def main():
             
             # Sort by importance
             importance_df = importance_df.sort_values('Importance', ascending=False)
-            
-            # Remove the redundant heading
-            # st.write("**Random Forest Feature Importance Analysis:**")  # Removed this line
-            
+                        
             # Create mapping of display names back to original names for the conditional statements
             reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
             
