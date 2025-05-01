@@ -2,10 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import traceback
-from datetime import datetime
 
-from utils import (load_data, train_model, make_prediction, get_feature_importance, 
-                 train_filtered_model, calculate_date_filtered_mape)
+from utils import load_data, train_model, make_prediction, get_feature_importance
 
 FEATURE_DISPLAY_NAMES = {
     'gold_price_usd': 'Gold Price in USD',
@@ -138,34 +136,13 @@ def main():
         st.error("Please select at least one feature for prediction.")
         return
     
-    # Add date range selection for MAPE calculation
-    st.sidebar.subheader("Model Analysis Options")
-    calculate_recent_mape = st.sidebar.checkbox("Calculate 2024-2025 MAPE", value=True)
-    
     try:
         with st.spinner("Training model..."):
-            # Train the main model on all data
-            model, r_squared, rmse, clean_df, mape, test_predictions = train_model(clean_btc_df, selected_features)
+            model, r_squared, rmse, clean_df, mape = train_model(clean_btc_df, selected_features)
             
             if model is None:
                 st.error("Could not train model. Please check your data.")
                 return
-            
-            # Calculate 2024-2025 specific MAPE if requested
-            recent_mape = None
-            if calculate_recent_mape:
-                # Option 1: Train a model specifically on 2024-2025 data
-                recent_start_date = "2024-01-01"
-                recent_end_date = "2025-03-31"  # Assuming data goes until March 2025
-                
-                # Train a model specifically on 2024-2025 data
-                with st.spinner("Calculating 2024-2025 metrics..."):
-                    recent_model, recent_r2, recent_rmse, recent_df, recent_mape, _ = train_filtered_model(
-                        clean_btc_df, selected_features, recent_start_date, recent_end_date
-                    )
-                    
-                    if recent_model is not None:
-                        st.success("2024-2025 metrics calculated successfully!")
         
         st.subheader("Make a Prediction")
         
@@ -215,29 +192,13 @@ def main():
                 st.success(f'Estimated BTC price: ${prediction:,.0f}')
                 
         st.subheader("Model Information")
-        
-        # Create columns for metrics
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("### Full Dataset Metrics (2015-2025)")
-            st.write(f"R-squared: {r_squared:.2f}")
-            st.write(f"RMSE: ${rmse:,.0f}")
-            st.write(f"MAPE: {mape:.1f}%")
-            st.write(f"R² of {r_squared:.2f} means the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
-            st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
-            st.write(f"MAPE of {mape:.1f}% means that, on average, the model's predictions are off by {mape:.1f}% of the actual Bitcoin price.")
-        
-        # Display recent metrics if calculated
-        if calculate_recent_mape and recent_mape is not None:
-            with col2:
-                st.write("### 2024-2025 Metrics")
-                st.write(f"R-squared: {recent_r2:.2f}")
-                st.write(f"RMSE: ${recent_rmse:,.0f}")
-                st.write(f"MAPE: {recent_mape:.1f}%")
-                st.write(f"For 2024-2025 data only, the model shows {int(recent_r2*100)}% accuracy in explaining price fluctuations.")
-                st.write(f"Recent RMSE of ${recent_rmse:,.0f} shows the average prediction error in dollars for recent data.")
-                st.write(f"Recent MAPE of {recent_mape:.1f}% indicates that for 2024-2025 data, predictions are off by {recent_mape:.1f}% on average.")
+        st.write(f"Model R-squared: {r_squared:.2f}")
+        st.write(f"RMSE (Root Mean Square Error): ${rmse:,.0f}")
+        if mape is not None:
+            st.write(f"MAPE (Mean Absolute Percentage Error): {mape:.0f}%")
+            st.write(f"MAPE means that, on average, the model's predictions are off by {mape:.1f}% of the actual Bitcoin price.")
+        st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
+        st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
         st.subheader("Feature Importance Analysis")
         
