@@ -134,46 +134,6 @@ def train_model(df, feature_cols, random_state=123):
         st.error(traceback.format_exc())
         return None, None, None, None, None, None
 
-def calculate_date_filtered_mape(df, test_predictions, date_start, date_end):
-    """
-    Calculate MAPE for a specific date range
-    
-    Args:
-        df: Original dataframe with date column
-        test_predictions: Dictionary containing y_test and y_pred
-        date_start: Start date for filtering (string 'YYYY-MM-DD' or datetime)
-        date_end: End date for filtering (string 'YYYY-MM-DD' or datetime)
-        
-    Returns:
-        MAPE value as a percentage or None if no data in range
-    """
-    try:
-        # Ensure we have the necessary data
-        if df is None or test_predictions is None or 'date' not in df.columns:
-            return None
-            
-        # Convert string dates to datetime if needed
-        if isinstance(date_start, str):
-            date_start = pd.to_datetime(date_start)
-        if isinstance(date_end, str):
-            date_end = pd.to_datetime(date_end)
-            
-        # Create boolean mask for the date range
-        date_mask = (df['date'] >= date_start) & (df['date'] <= date_end)
-        
-        # Filter the test indices to only those within our date range
-        # This is more complex because we need to match indices between different datasets
-        
-        # Get MAPE for this specific date range
-        # This is a simplified approach - we'd need to match test set indices to original data
-        # For a complete implementation, we would need to track indices during train/test split
-        
-        # For now, we'll return a None if we can't calculate it
-        return None
-    except Exception as e:
-        st.error(f"Error calculating date-filtered MAPE: {e}")
-        return None
-
 def make_prediction(model, feature_values):
     """Function to make a prediction with multiple features"""
     if model is None:
@@ -239,18 +199,22 @@ def train_filtered_model(df, feature_cols, date_start, date_end, random_state=12
         if df is None or 'date' not in df.columns:
             return None, None, None, None, None, None
             
+        # Make a copy of the dataframe to avoid modifying the original
+        df_copy = df.copy()
+        
+        # Make sure date column is datetime type
+        if not pd.api.types.is_datetime64_any_dtype(df_copy['date']):
+            df_copy['date'] = pd.to_datetime(df_copy['date'])
+        
         # Convert string dates to datetime if needed
         if isinstance(date_start, str):
             date_start = pd.to_datetime(date_start)
         if isinstance(date_end, str):
             date_end = pd.to_datetime(date_end)
             
-        # Create a copy to avoid modifying the original
-        df_copy = df.copy()
-        
         # Filter the dataframe to only include the date range
-        date_mask = (df_copy['date'] >= date_start) & (df_copy['date'] <= date_end)
-        df_filtered = df_copy[date_mask].copy()
+        df_filtered = df_copy[df_copy['date'] >= date_start]
+        df_filtered = df_filtered[df_filtered['date'] <= date_end]
         
         if len(df_filtered) < 10:
             st.warning(f"Not enough data points in the date range {date_start} to {date_end} for reliable model training")
@@ -262,5 +226,4 @@ def train_filtered_model(df, feature_cols, date_start, date_end, random_state=12
         st.error(f"Error training filtered model: {e}")
         st.error(traceback.format_exc())
         return None, None, None, None, None, None
-
     
