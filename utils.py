@@ -6,6 +6,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 import streamlit as st
 import traceback
+from operator import itemgetter
 
 """Function to load data"""
 def load_data():
