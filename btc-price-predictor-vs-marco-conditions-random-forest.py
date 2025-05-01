@@ -176,7 +176,7 @@ def main():
         st.write(f"RMSE of {rmse:,.2f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
         # Display feature importance
-        st.subheader("Feature Importance")
+        st.subheader("Feature Importance Analysis")  # Changed from "Feature Importance" to be more specific
         
         # Get feature importance
         feature_importance = get_feature_importance(model, selected_features)
@@ -201,8 +201,8 @@ def main():
             # Sort by importance
             importance_df = importance_df.sort_values('Importance', ascending=False)
             
-            # Display feature importance directly (not in an expandable section)
-            st.write("**Random Forest Feature Importance Analysis:**")
+            # Remove the redundant heading
+            # st.write("**Random Forest Feature Importance Analysis:**")  # Removed this line
             
             # Create mapping of display names back to original names for the conditional statements
             reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
