@@ -169,9 +169,9 @@ def main():
         st.write(f"RMSE (Root Mean Square Error): ${rmse:,.2f}")
         
         if r_squared > 0.9:
-            st.write(f"R² of {r_squared:.3f} is very strong, which means that the model accounts for approximately {r_squared*100:.1f}% of the fluctuations in Bitcoin prices.")
+            st.write(f"R² of {r_squared:.3f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
         elif r_squared > 0.8:
-            st.write(f"R² of {r_squared:.3f} is quite strong, which means that the model accounts for approximately {r_squared*100:.1f}% of the fluctuations in Bitcoin prices.")
+            st.write(f"R² of {r_squared:.3f} is quite strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
 
         st.write(f"RMSE of {rmse:,.2f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
@@ -211,30 +211,30 @@ def main():
             for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
                                                            key=lambda x: x[1], 
                                                            reverse=True), 1):
-                # Format importance as percentage with % sign
-                importance_pct = importance * 100
-                st.markdown(f"**{i}. {display_feature} (importance: {importance:.2f} / {importance_pct:.1f}%):**")
+                # Format importance as whole percentage (no decimal)
+                importance_pct = int(importance * 100)
+                st.markdown(f"**{i}. {display_feature} (importance: {importance_pct}%):**")
                 
                 # Get original feature name for conditional logic
                 original_feature = reverse_mapping.get(display_feature, display_feature)
                 
                 if original_feature == 'US_M2_money_supply_in_billions':
-                    st.write(f"Money supply accounts for {importance_pct:.1f}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
+                    st.write(f"Money supply accounts for {importance_pct}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
                 
                 elif original_feature == 'US_inflation':
-                    st.write(f"At {importance_pct:.1f}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
+                    st.write(f"At {importance_pct}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
                 
                 elif original_feature == 'SP500':
-                    st.write(f"S&P 500's {importance_pct:.1f}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
+                    st.write(f"S&P 500's {importance_pct}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
                 
                 elif original_feature == 'gold_price_usd':
-                    st.write(f"The {importance_pct:.1f}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
+                    st.write(f"The {importance_pct}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
                 
                 elif original_feature == 'fed_funds_rate':
-                    st.write(f"Fed Funds Rate at {importance_pct:.1f}% suggests interest rates have less direct impact compared to money supply and inflation.")
+                    st.write(f"Fed Funds Rate at {importance_pct}% suggests interest rates have less direct impact compared to money supply and inflation.")
                 
                 else:
-                    st.write(f"This feature contributes {importance_pct:.1f}% to the model's predictive power.")
+                    st.write(f"This feature contributes {importance_pct}% to the model's predictive power.")
             
             st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
         
