@@ -112,18 +112,16 @@ def train_model(df, feature_cols, random_state=123):
         """Calculate R-squared on test data"""
         r_squared = model.score(X_test, y_test)
        
-        """Calculate RMSE on test data"""
+        """Calculate RMSE and MAPE on test data"""
         y_pred = model.predict(X_test)
         rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
-        
-        """Calculate MAPE on test data"""
         mape = calculate_mape(y_test, y_pred)
         
         """Store imputer and scaler in model object for prediction"""
         model._imputer = imputer
         model._scaler = scaler
        
-        return model, r_squared, rmse, mape, df_clean
+        return model, r_squared, rmse, df_clean, mape
     except Exception as e:
         st.error(f"Error during model training: {e}")
         st.error(traceback.format_exc())
@@ -167,82 +165,12 @@ def get_feature_importance(model, feature_cols):
         
         """Sort by importance values in descending order"""
         sorted_importance = {k: v for k, v in sorted(feature_importance.items(), 
-                                                   key=lambda item: item[1], 
-                                                   reverse=True)}
+                                                  key=lambda item: item[1], 
+                                                  reverse=True)}
         
         return sorted_importance
     except Exception as e:
         st.error(f"Error getting feature importance: {e}")
         return None
 
-# Example Streamlit UI code that incorporates MAPE
-def display_model_metrics(r_squared, rmse, mape):
-    """Display model performance metrics in Streamlit UI"""
-    st.subheader("Model Performance Metrics")
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric(label="R² Score", value=f"{r_squared:.4f}")
-        st.caption("Higher is better. 1.0 is perfect.")
-        
-    with col2:
-        st.metric(label="RMSE", value=f"${rmse:.2f}")
-        st.caption("Lower is better. Shows average prediction error in USD.")
-        
-    with col3:
-        st.metric(label="MAPE", value=f"{mape:.2f}%")
-        st.caption("Lower is better. Shows average percentage error.")
-
-# Example of how to update the main Streamlit app
-def main():
-    st.title("Bitcoin Price Prediction with Macroeconomic Indicators")
-    
-    df = load_data()
-    if df is None:
-        return
-    
-    # Create a clean copy of the dataframe for UI display
-    clean_df = df.copy()
-    if 'date' in clean_df.columns:
-        clean_df = clean_df.set_index('date')
-    
-    # Convert all columns to numeric, coercing errors to NaN
-    for col in clean_df.columns:
-        clean_df[col] = pd.to_numeric(clean_df[col], errors='coerce')
-    
-    # Your feature selection code here
-    available_features = [col for col in df.columns if col not in ['date', 'btc_price_usd']]
-    default_features = ['inflation_rate', 'unemployment_rate', 'interest_rate']
-    
-    # Make sure default features exist in the dataframe
-    default_features = [f for f in default_features if f in available_features]
-    
-    feature_cols = st.multiselect("Select Features", available_features, 
-                                 default=default_features[:min(3, len(default_features))])
-    
-    if st.button("Train Model"):
-        if not feature_cols:
-            st.warning("Please select at least one feature to train the model.")
-            return
-            
-        with st.spinner("Training model..."):
-            model, r_squared, rmse, mape, df_clean = train_model(df, feature_cols)
-            
-            if model is not None:
-                st.success("Model trained successfully!")
-                
-                # Display metrics with the new MAPE value
-                display_model_metrics(r_squared, rmse, mape)
-                
-                # Feature importance
-                importance = get_feature_importance(model, feature_cols)
-                if importance:
-                    st.subheader("Feature Importance")
-                    feature_imp_df = pd.DataFrame({'Importance': importance})
-                    st.bar_chart(feature_imp_df)
-    
-    # Rest of your prediction UI code...
-
-if __name__ == "__main__":
-    main()
