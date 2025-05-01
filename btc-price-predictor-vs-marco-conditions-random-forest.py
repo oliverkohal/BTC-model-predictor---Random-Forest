@@ -204,9 +204,11 @@ def main():
             reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
             
             # Display each feature's importance with analysis
-            for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
-                                                           key=lambda x: x[1], 
-                                                           reverse=True), 1):
+            def get_importance(item): return item[1]
+
+            # Display each feature's importance with analysis
+            for i, (display_feature, importance) in enumerate(
+            sorted(display_importance.items(), key=get_importance, reverse=True), 1):
                 # Format importance as whole percentage (no decimal)
                 importance_pct = int(importance * 100)
                 st.markdown(f"**{i}. {display_feature} (importance: {importance_pct}%):**")
