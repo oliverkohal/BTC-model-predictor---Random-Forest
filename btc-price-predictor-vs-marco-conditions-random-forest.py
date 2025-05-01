@@ -6,9 +6,9 @@ import traceback
 import os
 
 from utils import load_data, preprocess_data, train_model, make_prediction, get_feature_importance
-"""
-Define feature display names mapping
-"""
+
+# Define feature display names mapping
+
 feature_display_names = {
     'gold_price_usd': 'Gold Price in USD',
     'SP500': 'S&P 500',
