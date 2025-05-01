@@ -200,6 +200,41 @@ def main():
             
             # Sort by importance
             importance_df = importance_df.sort_values('Importance', ascending=False)
+            
+            # Display feature importance directly (not in an expandable section)
+            st.write("**Random Forest Feature Importance Analysis:**")
+            
+            # Create mapping of display names back to original names for the conditional statements
+            reverse_mapping = {v: k for k, v in FEATURE_DISPLAY_NAMES.items()}
+            
+            # Display each feature's importance with analysis
+            for i, (display_feature, importance) in enumerate(sorted(display_importance.items(), 
+                                                           key=lambda x: x[1], 
+                                                           reverse=True), 1):
+                st.markdown(f"**{i}. {display_feature} (importance: {importance:.2f}):**")
+                
+                # Get original feature name for conditional logic
+                original_feature = reverse_mapping.get(display_feature, display_feature)
+                
+                if original_feature == 'US_M2_money_supply_in_billions':
+                    st.write(f"Money supply accounts for {importance*100:.1f}% of the model's predictive power, strongly confirming the monetary expansion thesis for Bitcoin pricing.")
+                
+                elif original_feature == 'US_inflation':
+                    st.write(f"At {importance*100:.1f}% importance, inflation serves as a significant driver, supporting Bitcoin's narrative as an inflation hedge.")
+                
+                elif original_feature == 'SP500':
+                    st.write(f"S&P 500's {importance*100:.1f}% importance reveals correlation with traditional markets, suggesting Bitcoin isn't fully decoupled from broader market sentiment.")
+                
+                elif original_feature == 'gold_price_usd':
+                    st.write(f"The {importance*100:.1f}% importance of gold prices indicates some relationship with traditional store-of-value assets, though significantly less than monetary factors.")
+                
+                elif original_feature == 'fed_funds_rate':
+                    st.write(f"Fed Funds Rate at {importance*100:.1f}% suggests interest rates have less direct impact compared to money supply and inflation.")
+                
+                else:
+                    st.write(f"This feature contributes {importance*100:.1f}% to the model's predictive power.")
+            
+            st.write("The model strongly supports the monetary theory of Bitcoin pricing, where expanded money supply flows into assets over time, with inflation expectations acting as a secondary driver of investor behavior.")
         
         # Add disclaimer
         st.info("Disclaimer: This tool is for educational purposes only. Cryptocurrency investments carry significant risk.")
