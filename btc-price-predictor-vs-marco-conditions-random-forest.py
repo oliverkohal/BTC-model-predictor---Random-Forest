@@ -251,7 +251,7 @@ def main():
             - **Recent Years (2023-2025)**: Improving MAPE values suggest increasing alignment with macroeconomic indicators
             - **Crisis Periods**: Note the strong model performance during major economic events (e.g., 2020 pandemic)
             
-            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions.
+            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions. This is due to institutions playing a bigger role in BTC market in the later years and viewing it as an inflation hedge when the US dollar declines.
             """)
             
             # Removed the "Show Raw Yearly Metrics" expander section
