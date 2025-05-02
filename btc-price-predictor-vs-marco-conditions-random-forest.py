@@ -246,12 +246,12 @@ def main():
             st.markdown("""
             #### Insights from Yearly Analysis
             
-            - **Early Market (2015)**: High MAPE and negative R² indicate that in Bitcoin's early days, macro factors were poor predictors of price
-            - **Middle Period (2016-2022)**: Mixed performance with varying R² values shows evolving relationship with macro factors
-            - **Recent Years (2023-2025)**: Improving MAPE values suggest increasing alignment with macroeconomic indicators
+            - **Early Market (2015)**:  High MAPE (40.41%) and negative R² (-1.89) indicate that in Bitcoin's early days, macroeconomic factors were poor predictors of price movements
+            - **Middle Period (2016-2022)**: Mixed performance with R² values ranging from 0.32 to 0.87, suggesting varying degrees of correlation
+            - **Recent Years (2023-2025)**: Improving MAPE values (dropping to just 4.11% in 2025) suggest increasing alignment with macroeconomic indicators
             - **Crisis Periods**: Note the strong model performance during major economic events (e.g., 2020 pandemic)
             
-            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions. This is due to institutions playing a bigger role in BTC market in the later years and viewing it as an inflation hedge when the US dollar declines.
+            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions. This is due to institutions playing a bigger role in BTC market in the later years and viewing it as a safe heaven from US dollar declines.
             """)
             
             # Removed the "Show Raw Yearly Metrics" expander section
