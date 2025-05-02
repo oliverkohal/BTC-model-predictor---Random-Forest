@@ -254,7 +254,7 @@ def main():
             - **Recent Years (2023-2025)**: Improving MAPE values (dropping to just 4.11% in 2025) suggest increasing alignment with macroeconomic indicators.
             - **Crisis Period**: The model's strong performance during major economic events such as the 2020 pandemic. The Fed's aggressive monetary policy response (rate cuts and expanded money supply) created strong directional signals that the model could capture.
             
-            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions. This is due to institutions playing a bigger role in BTC market in the later years and viewing it as a safe heaven from US dollar declines.
+            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions. This transformation reflects the growing institutional adoption of Bitcoin as a strategic hedge against monetary debasement, with professional investors increasingly incorporating it into diversified portfolios alongside traditional inflation-resistant assets.
             """)
             
             # Removed the "Show Raw Yearly Metrics" expander section
