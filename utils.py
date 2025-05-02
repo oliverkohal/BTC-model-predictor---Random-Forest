@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
 import streamlit as st
 import traceback
 
@@ -62,8 +63,7 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
 
 def calculate_mape(y_true, y_pred):
     """
-    Calculate Mean Absolute Percentage Error (MAPE)
-    MAPE = (100/n) * sum(|actual - predicted|/|actual|)
+    Calculate Mean Absolute Percentage Error (MAPE) without using epsilon
     
     Args:
         y_true: Array of actual values
@@ -72,17 +72,18 @@ def calculate_mape(y_true, y_pred):
     Returns:
         MAPE value as a percentage
     """
-    # Convert inputs to numpy arrays if they aren't already
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    # Filter out any zero values in y_true to avoid division by zero
+    non_zero_indices = y_true != 0
     
-    # Avoid division by zero by excluding zero values from calculation
-    mask = y_true != 0
-    if not np.any(mask):
-        return np.nan  # Return NaN if all actual values are zero
+    if not any(non_zero_indices):
+        # If all true values are zero, return a special value
+        return float('inf')
     
-    # Calculate MAPE for non-zero values
-    return 100 * np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask]))
+    # Calculate APE only for non-zero true values
+    ape = np.abs((y_true[non_zero_indices] - y_pred[non_zero_indices]) / y_true[non_zero_indices]) * 100
+    
+    # Return the mean
+    return np.mean(ape)
 
 def train_model(df, feature_cols, random_state=123):
     """Train Random Forest model with optimized parameters"""
@@ -110,11 +111,11 @@ def train_model(df, feature_cols, random_state=123):
         model.fit(X_train, y_train)
        
         """Calculate R-squared on test data"""
-        r_squared = model.score(X_test, y_test)
+        y_pred = model.predict(X_test)
+        r_squared = r2_score(y_test, y_pred)
        
         """Calculate RMSE and MAPE on test data"""
-        y_pred = model.predict(X_test)
-        rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         mape = calculate_mape(y_test, y_pred)
         
         """Store imputer and scaler in model object for prediction"""
@@ -200,6 +201,9 @@ def calculate_yearly_mape(df, model, feature_cols, target_col='btc_price_usd'):
         # Dictionary to store yearly metrics
         yearly_metrics = {}
         
+        # Use the model's scaler stored during training
+        scaler = model._scaler
+        
         for year in sorted(years):
             # Filter data for this year
             year_data = df[df['date'].dt.year == year]
@@ -221,37 +225,24 @@ def calculate_yearly_mape(df, model, feature_cols, target_col='btc_price_usd'):
             if y_year.isna().all():
                 continue
                 
-            # Apply the same preprocessing as during training
-            if hasattr(model, '_imputer') and hasattr(model, '_scaler'):
-                X_year_imputed = model._imputer.transform(X_year)
-                X_year_scaled = model._scaler.transform(X_year_imputed)
-            else:
-                # Fallback if no preprocessing objects stored
-                imputer = SimpleImputer(strategy='median')
-                X_year_imputed = imputer.fit_transform(X_year)
-                scaler = StandardScaler()
-                X_year_scaled = scaler.fit_transform(X_year_imputed)
+            # Create a new imputer for each year
+            imputer = SimpleImputer(strategy='median')
+            X_year_imputed = imputer.fit_transform(X_year)
+            
+            # Scale features using the same scaler as the model training
+            X_year_scaled = scaler.transform(X_year_imputed)
             
             # Make predictions
             y_year_pred = model.predict(X_year_scaled)
             
-            # Filter out NaN values in actual values
-            mask = ~np.isnan(y_year.values)
-            y_actual = y_year.values[mask]
-            y_pred = y_year_pred[mask]
-            
-            # Skip if no valid pairs remain
-            if len(y_actual) < 5:
-                continue
-            
-            # Calculate metrics
-            mape = calculate_mape(y_actual, y_pred)
-            rmse = np.sqrt(np.mean((y_actual - y_pred) ** 2))
-            r2 = np.corrcoef(y_actual, y_pred)[0, 1] ** 2 if len(y_actual) > 1 else np.nan
+            # Calculate metrics using scikit-learn functions
+            mape = calculate_mape(y_year.values, y_year_pred)
+            rmse = np.sqrt(mean_squared_error(y_year.values, y_year_pred))
+            r2 = r2_score(y_year.values, y_year_pred)
             
             # Store metrics in dictionary
             yearly_metrics[year] = {
-                'n': len(y_actual),
+                'n': len(year_data),
                 'mape': mape,
                 'rmse': rmse,
                 'r2': r2
