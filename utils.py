@@ -60,17 +60,96 @@ def preprocess_data(df, feature_cols, target_col='btc_price_usd'):
     
     return X_clean, y_clean, df_clean, imputer, scaler
 
-def calculate_mape(y_true, y_pred):
+def calculate_yearly_mape(df, model, feature_cols, target_col='btc_price_usd'):
     """
-    Calculate Mean Absolute Percentage Error (MAPE)
-    MAPE = (100/n) * sum(|actual - predicted|/|actual|)
+    Calculate MAPE, RMSE, and R² for each year in the dataset
     
     Args:
-        y_true: Array of actual values
-        y_pred: Array of predicted values
+        df: DataFrame with date column and features
+        model: Trained Random Forest model
+        feature_cols: List of feature column names
+        target_col: Target column name
         
     Returns:
-        MAPE value as a percentage
+        Dictionary with yearly statistics
+    """
+    if 'date' not in df.columns or model is None:
+        return None
+        
+    try:
+        # Convert date to datetime if it's not already
+        if not pd.api.types.is_datetime64_any_dtype(df['date']):
+            df['date'] = pd.to_datetime(df['date'])
+            
+        # Get unique years in the dataset
+        years = df['date'].dt.year.unique()
+        
+        # Dictionary to store yearly metrics
+        yearly_metrics = {}
+        
+        for year in sorted(years):
+            # Filter data for this year
+            year_data = df[df['date'].dt.year == year]
+            
+            # Skip years with insufficient data
+            if len(year_data) < 5:
+                continue
+                
+            # Prepare features and target
+            X_year = year_data[feature_cols]
+            y_year = year_data[target_col]
+            
+            # Replace 'No data' with NaN and convert to numeric
+            X_year = X_year.replace('No data', np.nan)
+            for col in X_year.columns:
+                X_year[col] = pd.to_numeric(X_year[col], errors='coerce')
+            
+            # Skip if there are no valid target values
+            if y_year.isna().all():
+                continue
+                
+            # Apply the same preprocessing as during training
+            if hasattr(model, '_imputer') and hasattr(model, '_scaler'):
+                X_year_imputed = model._imputer.transform(X_year)
+                X_year_scaled = model._scaler.transform(X_year_imputed)
+            else:
+                # Fallback if no preprocessing objects stored
+                imputer = SimpleImputer(strategy='median')
+                X_year_imputed = imputer.fit_transform(X_year)
+                scaler = StandardScaler()
+                X_year_scaled = scaler.fit_transform(X_year_imputed)
+            
+            # Make predictions
+            y_year_pred = model.predict(X_year_scaled)
+            
+            # Filter out NaN values in actual values
+            mask = ~np.isnan(y_year.values)
+            y_actual = y_year.values[mask]
+            y_pred = y_year_pred[mask]
+            
+            # Skip if no valid pairs remain
+            if len(y_actual) < 5:
+                continue
+            
+            # Calculate metrics
+            mape = calculate_mape(y_actual, y_pred)
+            rmse = np.sqrt(np.mean((y_actual - y_pred) ** 2))
+            r2 = np.corrcoef(y_actual, y_pred)[0, 1] ** 2 if len(y_actual) > 1 else np.nan
+            
+            # Store metrics in dictionary
+            yearly_metrics[year] = {
+                'n': len(y_actual),
+                'mape': mape,
+                'rmse': rmse,
+                'r2': r2
+            }
+            
+        return yearly_metrics
+    except Exception as e:
+        import traceback
+        print(f"Error calculating yearly MAPE: {e}")
+        print(traceback.format_exc())
+        return None
     """
     # Convert inputs to numpy arrays if they aren't already
     y_true = np.asarray(y_true)
