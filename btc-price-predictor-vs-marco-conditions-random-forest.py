@@ -231,18 +231,21 @@ def main():
             yearly_df = pd.DataFrame.from_dict(yearly_metrics, orient='index')
             yearly_df.index.name = 'Year'
             yearly_df.reset_index(inplace=True)
-    
-            # Format the columns with exactly 2 decimal places including trailing zeros
+
+            # Format the columns with exactly 2 decimal places
             yearly_df['MAPE (%)'] = [f"{value:.2f}" for value in yearly_df['mape']]
             yearly_df['RMSE'] = [f"{value:.2f}" for value in yearly_df['rmse']]
             yearly_df['R²'] = [f"{value:.2f}" for value in yearly_df['r2']]
             yearly_df['Sample Size'] = yearly_df['n']
-    
+
+            # Adjust the index to start from 1 instead of 0
+            yearly_df.index = yearly_df.index + 1
+
             # Display only relevant columns
             display_df = yearly_df[['Year', 'Sample Size', 'MAPE (%)', 'RMSE', 'R²']]
             st.table(display_df)
             
-            # Add explanation of yearly metrics
+            # Explanation of yearly metrics
             st.markdown("""
             #### Insights from Yearly Analysis
             
