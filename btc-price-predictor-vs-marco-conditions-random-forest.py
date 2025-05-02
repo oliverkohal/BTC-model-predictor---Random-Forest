@@ -222,27 +222,28 @@ def main():
         st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
         st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
         
+       # Inside the main() function, where the yearly metrics are displayed:
+
         # Add yearly metrics display
         if yearly_metrics:
             st.subheader("Year-by-Year Analysis")
-            
-            # Create a DataFrame for better display
-            yearly_df = pd.DataFrame.from_dict(yearly_metrics, orient='index')
-            yearly_df.index.name = 'Year'
-            yearly_df.reset_index(inplace=True)
-            
-            # Format the columns
-            yearly_df['MAPE (%)'] = yearly_df['mape'].round(2)
-            yearly_df['RMSE'] = yearly_df['rmse'].round(2)
-            yearly_df['R²'] = yearly_df['r2'].round(2)
-            yearly_df['Sample Size'] = yearly_df['n']
-            
-            # Display only relevant columns
-            display_df = yearly_df[['Year', 'Sample Size', 'MAPE (%)', 'RMSE', 'R²']]
-            st.table(display_df)
-            
-            # Add explanation of yearly metrics
-            st.markdown("""
+    
+        # Create a DataFrame for better display
+        yearly_df = pd.DataFrame.from_dict(yearly_metrics, orient='index')
+        yearly_df.index.name = 'Year'
+        yearly_df.reset_index(inplace=True)
+    
+        # Format the columns with exactly 2 decimal places
+        yearly_df['MAPE (%)'] = yearly_df['mape'].apply(lambda x: f"{x:.2f}")
+        yearly_df['RMSE'] = yearly_df['rmse'].apply(lambda x: f"{x:.2f}")
+        yearly_df['R²'] = yearly_df['r2'].apply(lambda x: f"{x:.2f}")
+        yearly_df['Sample Size'] = yearly_df['n']
+    
+        # Display only relevant columns
+        display_df = yearly_df[['Year', 'Sample Size', 'MAPE (%)', 'RMSE', 'R²']]
+        st.table(display_df)
+        # Add explanation of yearly metrics
+        st.markdown("""
             #### Insights from Yearly Analysis
             
             - **Early Market (2015)**: High MAPE and negative R² indicate that in Bitcoin's early days, macro factors were poor predictors of price
