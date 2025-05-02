@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -255,8 +256,8 @@ def main():
             """)
             
             # Raw text display (optional - can be toggled)
-            with st.expander("Show Raw Yearly Metrics"):
-                st.text(format_yearly_metrics(yearly_metrics))
+        with st.expander("Show Raw Yearly Metrics"):
+             st.text(format_yearly_metrics(yearly_metrics))
         
         st.subheader("Feature Importance Analysis")
         
