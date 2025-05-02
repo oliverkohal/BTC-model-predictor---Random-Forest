@@ -225,7 +225,7 @@ def main():
         
         # Add yearly metrics display
         if yearly_metrics:
-            st.subheader("Year-by-Year Analysis")
+            st.subheader("Year-on-Year Analysis")
     
             # Create a DataFrame for better display
             yearly_df = pd.DataFrame.from_dict(yearly_metrics, orient='index')
