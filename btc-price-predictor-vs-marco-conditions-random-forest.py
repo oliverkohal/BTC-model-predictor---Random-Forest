@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import traceback
 
-from utils import load_data, train_model, make_prediction, get_feature_importance
+from utils import load_data, train_model, make_prediction, get_feature_importance, calculate_yearly_mape
 
 FEATURE_DISPLAY_NAMES = {
     'gold_price_usd': 'Gold Price in USD',
@@ -91,6 +91,25 @@ def sort_by_importance(items):
     
     return sorted(items, key=get_importance, reverse=True)
 
+def format_yearly_metrics(yearly_metrics):
+    """
+    Format yearly metrics for display
+    """
+    if not yearly_metrics:
+        return "No yearly metrics available"
+        
+    result = "Yearly MAPE Analysis (2015-2025):\n"
+    
+    for year, metrics in sorted(yearly_metrics.items()):
+        n = metrics['n']
+        mape = metrics['mape']
+        rmse = metrics['rmse']
+        r2 = metrics['r2']
+        
+        result += f"Year {year} (n={n}): MAPE = {mape:.2f}%, RMSE = {rmse:.2f}, R² = {r2:.2f}\n"
+        
+    return result
+
 def main():
     st.title('BTC Price Predictor Against Macro Conditions')
     st.write("""This model demonstrates how Bitcoin's price dynamics have evolved beyond the traditional 4-year cycle narrative in 2025. 
@@ -143,6 +162,9 @@ def main():
             if model is None:
                 st.error("Could not train model. Please check your data.")
                 return
+                
+            # Calculate yearly metrics
+            yearly_metrics = calculate_yearly_mape(clean_btc_df, model, selected_features)
         
         st.subheader("Make a Prediction")
         
@@ -199,6 +221,41 @@ def main():
             st.write(f"MAPE means that, on average, the model's predictions are off by {mape:.0f}% of the actual Bitcoin price.")
         st.write(f"R² of {r_squared:.2f} is very strong, which means that the model accounts for approximately {int(r_squared*100)}% of the fluctuations in Bitcoin prices.")
         st.write(f"RMSE of {rmse:,.0f} suggests that on average, the model's predictions differ from the actual Bitcoin price by about ${rmse:,.0f}.")
+        
+        # Add yearly metrics display
+        if yearly_metrics:
+            st.subheader("Year-by-Year Analysis")
+            
+            # Create a DataFrame for better display
+            yearly_df = pd.DataFrame.from_dict(yearly_metrics, orient='index')
+            yearly_df.index.name = 'Year'
+            yearly_df.reset_index(inplace=True)
+            
+            # Format the columns
+            yearly_df['MAPE (%)'] = yearly_df['mape'].round(2)
+            yearly_df['RMSE'] = yearly_df['rmse'].round(2)
+            yearly_df['R²'] = yearly_df['r2'].round(2)
+            yearly_df['Sample Size'] = yearly_df['n']
+            
+            # Display only relevant columns
+            display_df = yearly_df[['Year', 'Sample Size', 'MAPE (%)', 'RMSE', 'R²']]
+            st.table(display_df)
+            
+            # Add explanation of yearly metrics
+            st.markdown("""
+            #### Insights from Yearly Analysis
+            
+            - **Early Market (2015)**: High MAPE and negative R² indicate that in Bitcoin's early days, macro factors were poor predictors of price
+            - **Middle Period (2016-2022)**: Mixed performance with varying R² values shows evolving relationship with macro factors
+            - **Recent Years (2023-2025)**: Improving MAPE values suggest increasing alignment with macroeconomic indicators
+            - **Crisis Periods**: Note the strong model performance during major economic events (e.g., 2020 pandemic)
+            
+            This year-by-year analysis reveals Bitcoin's evolution from a speculative asset disconnected from traditional economics to one that increasingly responds to macroeconomic conditions.
+            """)
+            
+            # Raw text display (optional - can be toggled)
+            with st.expander("Show Raw Yearly Metrics"):
+                st.text(format_yearly_metrics(yearly_metrics))
         
         st.subheader("Feature Importance Analysis")
         
