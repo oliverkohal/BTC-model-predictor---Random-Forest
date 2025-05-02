@@ -195,7 +195,7 @@ def main():
                 default_val = int(default_val)
                 step = 1  # Use step of 1 for integer values
             
-            # Use friendly display name for the slider
+            # Use a display name for the slider
             display_name = FEATURE_DISPLAY_NAMES.get(feature, feature)
             
             feature_val = st.slider(
@@ -232,10 +232,10 @@ def main():
             yearly_df.index.name = 'Year'
             yearly_df.reset_index(inplace=True)
     
-            # Format the columns with exactly 2 decimal places
-            yearly_df['MAPE (%)'] = yearly_df['mape'].apply(lambda x: f"{x:.2f}")
-            yearly_df['RMSE'] = yearly_df['rmse'].apply(lambda x: f"{x:.2f}")
-            yearly_df['R²'] = yearly_df['r2'].apply(lambda x: f"{x:.2f}")
+            # Format the columns with exactly 2 decimal places including trailing zeros
+            yearly_df['MAPE (%)'] = [f"{value:.2f}" for value in yearly_df['mape']]
+            yearly_df['RMSE'] = [f"{value:.2f}" for value in yearly_df['rmse']]
+            yearly_df['R²'] = [f"{value:.2f}" for value in yearly_df['r2']]
             yearly_df['Sample Size'] = yearly_df['n']
     
             # Display only relevant columns
